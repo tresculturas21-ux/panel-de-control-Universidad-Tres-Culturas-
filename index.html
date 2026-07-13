@@ -37,32 +37,35 @@
             <form id="form-login-pass" onsubmit="validarPassword(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold uppercase text-utc-blue mb-1">Contraseña del Sistema</label>
-                    <input type="password" id="login-pass" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-utc-blue">
+                    <input type="password" id="login-pass" required autocomplete="current-password" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-utc-blue">
+                    <p class="text-[10px] text-gray-400 mt-2">El tipo de acceso se valida desde Supabase; las contraseñas ya no están escritas en este archivo.</p>
                 </div>
-                <button type="submit" class="w-full bg-utc-orange text-white py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider shadow-md hover:bg-[#b03f22] transition-all">
+                <button id="btn-validar-acceso" type="submit" class="w-full bg-utc-orange text-white py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider shadow-md hover:bg-[#b03f22] transition-all">
                     Verificar Credenciales
                 </button>
             </form>
 
-            <form id="form-login-cargo" onsubmit="finalizarIngresoOperador(event)" class="space-y-4 hidden">
-                <p class="text-xs text-gray-500 border-l-4 border-utc-orange pl-2 italic">Contraseña correcta. Por favor identifique su cargo y nombre para continuar:</p>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-utc-blue mb-1">¿Qué cargo ostenta?</label>
-                    <select id="login-cargo-tipo" onchange="cargarNombresLogin(this.value)" required class="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
+            <form id="form-login-identidad" onsubmit="finalizarIngresoPersonal(event)" class="space-y-4 hidden">
+                <p id="texto-identificacion" class="text-xs text-gray-500 border-l-4 border-utc-orange pl-2 italic">Contraseña correcta. Seleccione su nombre para continuar:</p>
+                <div id="bloque-cargo-directivo" class="hidden">
+                    <label class="block text-xs font-bold uppercase text-utc-blue mb-1">Cargo</label>
+                    <select id="login-cargo-tipo" onchange="cargarNombresLogin()" class="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
                         <option value="">-- Seleccione Cargo --</option>
-                        <option value="Maestro">Maestro / Profesor</option>
-                        <option value="Directivo">Directivo / Consultor</option>
+                        <option value="Consultor">Consultor</option>
+                        <option value="Prefecto">Prefecto</option>
+                        <option value="Directivo">Directivo</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase text-utc-blue mb-1">Seleccione su Nombre</label>
                     <select id="login-cargo-nombre" required class="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
-                        <option value="">-- Seleccione primero el cargo --</option>
+                        <option value="">-- Seleccione su nombre --</option>
                     </select>
                 </div>
                 <button type="submit" class="w-full bg-utc-blue text-white py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider shadow-md hover:bg-[#143d73] transition-all">
-                    Ingresar al Registro
+                    Ingresar al Sistema
                 </button>
+                <button type="button" onclick="volverLoginPassword()" class="w-full text-xs font-bold text-gray-500 hover:text-utc-blue">Volver</button>
             </form>
         </div>
     </div>
@@ -89,6 +92,9 @@
                 </button>
                 <button onclick="switchTab('historial')" id="btn-historial" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all">
                     <span>Historial Alumnos</span>
+                </button>
+                <button onclick="switchTab('agenda')" id="btn-agenda" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all hidden">
+                    <span>Agenda de Padres</span>
                 </button>
                 <button onclick="switchTab('administracion')" id="btn-administracion" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all hidden">
                     <span>Panel de Control (Admin)</span>
@@ -254,6 +260,99 @@
                 </div>
             </section>
 
+
+            <section id="tab-agenda" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-utc-blue">Agenda de Padres de Familia</h2>
+                        <p class="text-xs md:text-sm text-gray-500">Registro y seguimiento de citas con madres, padres o tutores.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <input type="date" id="filtro-fecha-citas" onchange="renderizarCitas()" class="border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white">
+                        <select id="filtro-estado-citas" onchange="renderizarCitas()" class="border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white">
+                            <option value="todos">Todos los estados</option>
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="Confirmada">Confirmada</option>
+                            <option value="Atendida">Atendida</option>
+                            <option value="Cancelada">Cancelada</option>
+                        </select>
+                        <button onclick="limpiarFiltrosCitas()" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-xs font-bold">Limpiar filtros</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div class="bg-white p-5 md:p-6 rounded-2xl border border-gray-200 shadow-md xl:col-span-1">
+                        <h3 class="text-base font-extrabold text-utc-blue border-b pb-3 mb-4">Nueva cita</h3>
+                        <form id="form-cita" onsubmit="guardarCita(event)" class="space-y-3 text-xs">
+                            <div class="relative">
+                                <label class="block font-bold uppercase text-utc-blue mb-1">Alumno</label>
+                                <input id="cita-buscar-alumno" type="text" oninput="buscarAlumnoCita(this.value)" autocomplete="off" required placeholder="Matrícula o nombre..." class="w-full border rounded-lg px-3 py-2">
+                                <div id="sugerencias-alumno-cita" class="absolute left-0 right-0 mt-1 bg-white border rounded-lg shadow-xl max-h-44 overflow-y-auto z-50 hidden"></div>
+                                <input id="cita-matricula" type="hidden">
+                                <input id="cita-alumno" type="hidden">
+                                <input id="cita-grupo" type="hidden">
+                            </div>
+                            <input id="cita-tutor" type="text" required placeholder="Nombre del padre, madre o tutor" class="w-full border rounded-lg px-3 py-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input id="cita-fecha" type="date" required class="w-full border rounded-lg px-3 py-2">
+                                <input id="cita-hora" type="time" required class="w-full border rounded-lg px-3 py-2">
+                            </div>
+                            <input id="cita-motivo" type="text" required placeholder="Motivo de la cita" class="w-full border rounded-lg px-3 py-2">
+                            <input id="cita-responsable" type="text" required placeholder="Responsable de atender" class="w-full border rounded-lg px-3 py-2">
+                            <select id="cita-estado" class="w-full border rounded-lg px-3 py-2 bg-white">
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Confirmada">Confirmada</option>
+                                <option value="Atendida">Atendida</option>
+                                <option value="Cancelada">Cancelada</option>
+                            </select>
+                            <textarea id="cita-observaciones" rows="3" placeholder="Observaciones adicionales" class="w-full border rounded-lg px-3 py-2 resize-none"></textarea>
+                            <button type="submit" class="w-full bg-utc-blue text-white py-3 rounded-lg font-bold uppercase tracking-wider">Guardar cita</button>
+                        </form>
+                    </div>
+
+                    <div class="xl:col-span-2 space-y-6">
+                        <div class="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
+                            <div class="p-4 border-b flex items-center justify-between gap-3">
+                                <h3 class="font-extrabold text-utc-blue">Citas registradas</h3>
+                                <span id="contador-citas" class="text-xs font-bold text-gray-500">0 citas</span>
+                            </div>
+                            <div class="overflow-x-auto max-h-[430px] overflow-y-auto">
+                                <table class="min-w-full divide-y divide-gray-200 text-xs">
+                                    <thead class="bg-gray-50 sticky top-0">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left">Fecha / Hora</th>
+                                            <th class="px-3 py-2 text-left">Alumno</th>
+                                            <th class="px-3 py-2 text-left">Tutor</th>
+                                            <th class="px-3 py-2 text-left">Motivo</th>
+                                            <th class="px-3 py-2 text-left">Responsable</th>
+                                            <th class="px-3 py-2 text-left">Estado</th>
+                                            <th class="px-3 py-2 text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabla-citas-cuerpo" class="divide-y bg-white"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-md">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <div>
+                                    <h3 class="font-extrabold text-utc-blue">Asistente de citas</h3>
+                                    <p class="text-[11px] text-gray-500">Consulta la agenda con preguntas como “¿Qué citas tengo hoy?” o “¿Qué citas hay mañana?”.</p>
+                                </div>
+                            </div>
+                            <div id="chat-citas" class="h-48 overflow-y-auto bg-gray-50 border rounded-xl p-3 space-y-2 text-xs mb-3">
+                                <div class="bg-white border rounded-lg p-3 text-gray-600">Hola. Puedo consultar las citas registradas en esta agenda.</div>
+                            </div>
+                            <form onsubmit="preguntarAsistenteCitas(event)" class="flex gap-2">
+                                <input id="pregunta-citas" type="text" required placeholder="Ej. ¿Qué citas tengo hoy?" class="flex-1 border rounded-lg px-3 py-2 text-xs">
+                                <button class="bg-utc-orange text-white px-4 py-2 rounded-lg text-xs font-bold">Preguntar</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="tab-administracion" class="tab-content hidden space-y-6 max-w-6xl mx-auto">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-md lg:col-span-1 space-y-4">
@@ -304,9 +403,14 @@
                     </div>
 
                     <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-md space-y-4">
-                        <h3 class="text-base font-extrabold text-utc-blue border-b pb-2">Gestión de Directivos / Consultores</h3>
-                        <div class="flex gap-2">
-                            <input type="text" id="input-nuevo-directivo" placeholder="Nombre del directivo..." class="flex-1 text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none">
+                        <h3 class="text-base font-extrabold text-utc-blue border-b pb-2">Gestión de Directivos</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <select id="input-cargo-directivo" class="text-xs border border-gray-300 rounded-lg px-3 py-2 bg-white">
+                                <option value="Consultor">Consultor</option>
+                                <option value="Prefecto">Prefecto</option>
+                                <option value="Directivo">Directivo</option>
+                            </select>
+                            <input type="text" id="input-nuevo-directivo" placeholder="Nombre completo..." class="sm:col-span-1 text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none">
                             <button onclick="agregarPersonal('directivos')" class="bg-utc-blue text-white text-xs font-bold uppercase px-4 py-2 rounded-lg">Añadir</button>
                         </div>
                         <ul id="lista-directivos" class="divide-y text-xs max-h-40 overflow-y-auto border rounded-xl p-2 bg-gray-50"></ul>
@@ -317,13 +421,9 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN DE ACCESOS
-        const PASS_ADMIN = "UTCadmin2026";
-        const PASS_OPERADOR = "UTCoperador2026";
-
         // CONFIGURACIÓN SUPABASE
-        const SUPABASE_URL = "https://lhgxcqawnqlvvuiowbqu.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoZ3hjcWF3bnFsdnZ1aW93YnF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5NjExOTUsImV4cCI6MjA5OTUzNzE5NX0.u55SRHNFKoY9tkmIRcxBNQ0HG4zx_Vd3Q__q_Wo_JtA";
+        const SUPABASE_URL = "https://uldfgofzalpfzexfsspl.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZGZnb2Z6YWxwZnpleGZzc3BsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MjUwMTQsImV4cCI6MjA5OTEwMTAxNH0.FRtbuw2njwNBSeH_qpbHvkHnCmfB00fnxE2c6D4ZSQI";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const opcionesCatalogo = {
@@ -340,6 +440,8 @@
         let listaDirectivos = ["Consultora Martínez", "Director General"];
         let personalMaestros = [];
         let personalDirectivos = [];
+        let citasPadres = [];
+        let tipoAccesoPendiente = null;
         let chartFlujo, chartTipo;
 
         function obtenerAutorReporte(i) {
@@ -367,66 +469,141 @@
 
                 incidencias = (resIncidencias.data || []).map(normalizarIncidencia);
                 baseAlumnos = resAlumnos.data || [];
-
                 personalMaestros = (resPersonal.data || []).filter(p => p.tipo === "maestros");
                 personalDirectivos = (resPersonal.data || []).filter(p => p.tipo === "directivos");
-
                 listaMaestros = personalMaestros.map(p => p.nombre);
                 listaDirectivos = personalDirectivos.map(p => p.nombre);
-
-                if (listaMaestros.length === 0) listaMaestros = ["Fulanito de Tal", "Profesora García"];
-                if (listaDirectivos.length === 0) listaDirectivos = ["Consultora Martínez", "Director General"];
 
                 actualizarSelectorAlumnos();
                 procesarAnaliticas();
 
-                if (rolActivo === "Administrador") {
-                    renderizarModuloAdministracion();
-                }
+                if (rolActivo === "Administrador") renderizarModuloAdministracion();
+                if (rolActivo === "Administrador" || rolActivo === "Directivo") await cargarCitas();
             } catch (error) {
                 console.error("Error cargando Supabase:", error);
-                alert("No se pudieron cargar los datos de Supabase. Revisa internet, tablas y políticas RLS.");
+                alert("No se pudieron cargar los datos principales de Supabase. Revisa internet, tablas y políticas RLS.");
             }
         }
 
-        function validarPassword(e) {
+        async function validarPassword(e) {
             e.preventDefault();
-            const passInput = document.getElementById('login-pass').value;
+            const passInput = document.getElementById('login-pass').value.trim();
+            const boton = document.getElementById('btn-validar-acceso');
+            if (!passInput) return;
 
-            if (passInput === PASS_ADMIN) {
-                rolActivo = "Administrador";
-                usuarioActivo = { nombre: "Pamela Elizabeth", cargo: "Administrador" };
-                ingresarAlSistema();
-            } else if (passInput === PASS_OPERADOR) {
-                rolActivo = "Operador";
-                document.getElementById('form-login-pass').classList.add('hidden');
-                document.getElementById('form-login-cargo').classList.remove('hidden');
+            boton.disabled = true;
+            boton.innerText = "VALIDANDO...";
+
+            try {
+                // Esta función RPC se creará después en Supabase y regresará:
+                // { valido: true, rol: "Administrador" | "Maestro" | "Directivo" }
+                const { data, error } = await supabaseClient.rpc('validar_acceso', { password_input: passInput });
+                if (error) throw error;
+
+                const respuesta = Array.isArray(data) ? data[0] : data;
+                if (!respuesta || respuesta.valido !== true) {
+                    alert("Contraseña institucional incorrecta.");
+                    return;
+                }
+
+                tipoAccesoPendiente = respuesta.rol;
+
+                if (respuesta.rol === "Administrador") {
+                    rolActivo = "Administrador";
+                    usuarioActivo = { nombre: "Pamela Elizabeth", cargo: "Administrador" };
+                    await ingresarAlSistema();
+                    return;
+                }
+
+                if (respuesta.rol !== "Maestro" && respuesta.rol !== "Directivo") {
+                    alert("El rol recibido desde Supabase no es válido.");
+                    return;
+                }
+
+                await cargarPersonalParaLogin();
+                prepararIdentificacionPersonal(respuesta.rol);
+            } catch (error) {
+                console.error("Error validando acceso:", error);
+                alert("Aún falta crear la función segura validar_acceso en Supabase. El index ya está preparado para usarla.");
+            } finally {
+                boton.disabled = false;
+                boton.innerText = "VERIFICAR CREDENCIALES";
+            }
+        }
+
+        async function cargarPersonalParaLogin() {
+            const { data, error } = await supabaseClient.from("personal").select("*").order("nombre", { ascending: true });
+            if (error) throw error;
+            personalMaestros = (data || []).filter(p => p.tipo === "maestros");
+            personalDirectivos = (data || []).filter(p => p.tipo === "directivos");
+            listaMaestros = personalMaestros.map(p => p.nombre);
+            listaDirectivos = personalDirectivos.map(p => p.nombre);
+        }
+
+        function prepararIdentificacionPersonal(rol) {
+            document.getElementById('form-login-pass').classList.add('hidden');
+            document.getElementById('form-login-identidad').classList.remove('hidden');
+            const bloqueCargo = document.getElementById('bloque-cargo-directivo');
+            const cargoSelect = document.getElementById('login-cargo-tipo');
+            const texto = document.getElementById('texto-identificacion');
+
+            if (rol === "Maestro") {
+                bloqueCargo.classList.add('hidden');
+                cargoSelect.required = false;
+                cargoSelect.value = "";
+                texto.innerText = "Acceso de Maestros correcto. Seleccione su nombre para continuar:";
             } else {
-                alert("Contraseña institucional incorrecta.");
+                bloqueCargo.classList.remove('hidden');
+                cargoSelect.required = true;
+                texto.innerText = "Acceso de Directivos correcto. Seleccione su cargo y nombre para continuar:";
             }
+            cargarNombresLogin();
         }
 
-        function cargarNombresLogin(cargo) {
+        function cargarNombresLogin() {
             const select = document.getElementById('login-cargo-nombre');
-            select.innerHTML = '<option value="">-- Seleccione Nombre --</option>';
-            let fuente = (cargo === "Maestro") ? listaMaestros : listaDirectivos;
-            if (!cargo) return;
+            select.innerHTML = '<option value="">-- Seleccione su nombre --</option>';
+            let registros = [];
 
-            fuente.sort().forEach(n => {
-                let opt = document.createElement('option');
-                opt.value = n;
-                opt.textContent = n;
-                select.appendChild(opt);
-            });
+            if (tipoAccesoPendiente === "Maestro") {
+                registros = personalMaestros;
+            } else if (tipoAccesoPendiente === "Directivo") {
+                const cargo = document.getElementById('login-cargo-tipo').value;
+                registros = personalDirectivos.filter(p => !cargo || !p.cargo || p.cargo === cargo);
+            }
+
+            registros
+                .sort((a, b) => String(a.nombre || "").localeCompare(String(b.nombre || "")))
+                .forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id ?? p.nombre;
+                    opt.textContent = tipoAccesoPendiente === "Directivo" && p.cargo ? `${p.nombre} — ${p.cargo}` : p.nombre;
+                    opt.dataset.nombre = p.nombre;
+                    opt.dataset.cargo = p.cargo || (tipoAccesoPendiente === "Maestro" ? "Maestro" : "Directivo");
+                    select.appendChild(opt);
+                });
         }
 
-        function finalizarIngresoOperador(e) {
+        async function finalizarIngresoPersonal(e) {
             e.preventDefault();
-            const cargo = document.getElementById('login-cargo-tipo').value;
-            const nombre = document.getElementById('login-cargo-nombre').value;
+            const select = document.getElementById('login-cargo-nombre');
+            const opcion = select.options[select.selectedIndex];
+            if (!opcion || !opcion.value) return alert("Seleccione su nombre.");
 
-            usuarioActivo = { nombre: nombre, cargo: cargo };
-            ingresarAlSistema();
+            rolActivo = tipoAccesoPendiente;
+            usuarioActivo = {
+                nombre: opcion.dataset.nombre || opcion.textContent,
+                cargo: tipoAccesoPendiente === "Maestro" ? "Maestro" : (opcion.dataset.cargo || document.getElementById('login-cargo-tipo').value || "Directivo")
+            };
+            await ingresarAlSistema();
+        }
+
+        function volverLoginPassword() {
+            tipoAccesoPendiente = null;
+            document.getElementById('form-login-identidad').classList.add('hidden');
+            document.getElementById('form-login-pass').classList.remove('hidden');
+            document.getElementById('login-cargo-tipo').value = "";
+            document.getElementById('login-cargo-nombre').innerHTML = '<option value="">-- Seleccione su nombre --</option>';
         }
 
         async function ingresarAlSistema() {
@@ -439,19 +616,19 @@
             document.getElementById('saludo-personalizado').innerText = `¡Hola, ${usuarioActivo.cargo} ${usuarioActivo.nombre}!`;
 
             const btnAdmin = document.getElementById('btn-administracion');
+            const btnAgenda = document.getElementById('btn-agenda');
             const zonaExportar = document.getElementById('zona-exportar');
             const columnasEliminar = document.querySelectorAll('.th-eliminar-registro');
 
-            if (rolActivo === "Administrador") {
-                btnAdmin.classList.remove('hidden');
-                zonaExportar.classList.remove('hidden');
-                columnasEliminar.forEach(c => c.classList.remove('hidden'));
-            } else {
-                btnAdmin.classList.add('hidden');
-                zonaExportar.classList.add('hidden');
-                columnasEliminar.forEach(c => c.classList.add('hidden'));
-                switchTab('registro');
-            }
+            const esAdmin = rolActivo === "Administrador";
+            const puedeVerAgenda = esAdmin || rolActivo === "Directivo";
+
+            btnAdmin.classList.toggle('hidden', !esAdmin);
+            btnAgenda.classList.toggle('hidden', !puedeVerAgenda);
+            zonaExportar.classList.toggle('hidden', !esAdmin);
+            columnasEliminar.forEach(c => c.classList.toggle('hidden', !esAdmin));
+
+            if (!esAdmin) switchTab('registro');
 
             inicializarGraficas();
             await cargarDatosSupabase();
@@ -462,9 +639,10 @@
             document.getElementById('form-incidencia').reset();
             document.getElementById('login-pass').value = "";
             document.getElementById('login-cargo-tipo').value = "";
-            document.getElementById('login-cargo-nombre').innerHTML = '<option value="">-- Seleccione primero el cargo --</option>';
+            document.getElementById('login-cargo-nombre').innerHTML = '<option value="">-- Seleccione su nombre --</option>';
+            tipoAccesoPendiente = null;
 
-            document.getElementById('form-login-cargo').classList.add('hidden');
+            document.getElementById('form-login-identidad').classList.add('hidden');
             document.getElementById('form-login-pass').classList.remove('hidden');
             document.getElementById('pantalla-login').classList.remove('hidden');
             document.getElementById('sidebar').classList.add('hidden');
@@ -503,7 +681,7 @@
             const ulD = document.getElementById('lista-directivos');
             ulD.innerHTML = '';
             personalDirectivos.forEach((d) => {
-                ulD.innerHTML += `<li class="flex justify-between py-1 border-b"><span>${d.nombre}</span><button onclick="eliminarPersonal('directivos', ${d.id})" class="text-red-500 font-bold hover:underline">X</button></li>`;
+                ulD.innerHTML += `<li class="flex justify-between gap-2 py-1 border-b"><span><strong>${d.nombre}</strong>${d.cargo ? ` <span class="text-gray-400">(${d.cargo})</span>` : ""}</span><button onclick="eliminarPersonal('directivos', ${d.id})" class="text-red-500 font-bold hover:underline">X</button></li>`;
             });
             if (personalDirectivos.length === 0) {
                 ulD.innerHTML = `<li class="py-2 text-gray-400 italic">Sin directivos en Supabase.</li>`;
@@ -591,7 +769,12 @@
 
             if (!val) return;
 
-            const { error } = await supabaseClient.from("personal").insert([{ nombre: val, tipo: tipo }]);
+            const nuevoRegistro = { nombre: val, tipo: tipo };
+            if (tipo === 'directivos') {
+                nuevoRegistro.cargo = document.getElementById('input-cargo-directivo').value;
+            }
+
+            const { error } = await supabaseClient.from("personal").insert([nuevoRegistro]);
             if (error) {
                 console.error(error);
                 return alert("No se pudo guardar el personal.");
@@ -648,6 +831,8 @@
         document.addEventListener('click', e => {
             const sugerencias = document.getElementById('sugerencias-alumno');
             if (sugerencias && e.target.id !== 'matricula') sugerencias.classList.add('hidden');
+            const sugerenciasCita = document.getElementById('sugerencias-alumno-cita');
+            if (sugerenciasCita && e.target.id !== 'cita-buscar-alumno') sugerenciasCita.classList.add('hidden');
         });
 
         function actualizarSelectorAlumnos() {
@@ -822,7 +1007,200 @@
             contenedor.classList.remove('hidden');
         }
 
+        async function cargarCitas() {
+            const { data, error } = await supabaseClient.from("citas_padres").select("*").order("fecha", { ascending: true }).order("hora", { ascending: true });
+            if (error) {
+                console.warn("La tabla citas_padres aún no está disponible:", error.message);
+                citasPadres = [];
+                renderizarCitas();
+                return;
+            }
+            citasPadres = data || [];
+            renderizarCitas();
+        }
+
+        function buscarAlumnoCita(valor) {
+            const contenedor = document.getElementById('sugerencias-alumno-cita');
+            contenedor.innerHTML = '';
+            const busqueda = valor.toLowerCase().trim();
+            if (busqueda.length < 2) return contenedor.classList.add('hidden');
+
+            const coincidencias = baseAlumnos.filter(a =>
+                String(a.matricula || "").toLowerCase().includes(busqueda) ||
+                String(a.nombre || "").toLowerCase().includes(busqueda)
+            ).slice(0, 6);
+
+            coincidencias.forEach(a => {
+                const item = document.createElement('div');
+                item.className = "p-2 hover:bg-gray-100 cursor-pointer border-b";
+                item.innerHTML = `<span class="font-bold text-utc-orange">[${a.matricula}]</span> ${a.nombre} <span class="text-gray-400">${a.grupo || ""}</span>`;
+                item.onclick = () => {
+                    document.getElementById('cita-buscar-alumno').value = `${a.matricula} - ${a.nombre}`;
+                    document.getElementById('cita-matricula').value = a.matricula || "";
+                    document.getElementById('cita-alumno').value = a.nombre || "";
+                    document.getElementById('cita-grupo').value = a.grupo || "";
+                    contenedor.classList.add('hidden');
+                };
+                contenedor.appendChild(item);
+            });
+            contenedor.classList.toggle('hidden', coincidencias.length === 0);
+        }
+
+        async function guardarCita(e) {
+            e.preventDefault();
+            if (!(rolActivo === "Administrador" || rolActivo === "Directivo")) return alert("No tiene permisos para registrar citas.");
+            if (!document.getElementById('cita-alumno').value) return alert("Seleccione un alumno de la lista de sugerencias.");
+
+            const nuevaCita = {
+                matricula: document.getElementById('cita-matricula').value,
+                alumno: document.getElementById('cita-alumno').value,
+                grupo: document.getElementById('cita-grupo').value,
+                tutor: document.getElementById('cita-tutor').value.trim(),
+                fecha: document.getElementById('cita-fecha').value,
+                hora: document.getElementById('cita-hora').value,
+                motivo: document.getElementById('cita-motivo').value.trim(),
+                responsable: document.getElementById('cita-responsable').value.trim(),
+                estado: document.getElementById('cita-estado').value,
+                observaciones: document.getElementById('cita-observaciones').value.trim(),
+                creado_por: `${usuarioActivo.cargo}: ${usuarioActivo.nombre}`
+            };
+
+            const { error } = await supabaseClient.from("citas_padres").insert([nuevaCita]);
+            if (error) {
+                console.error(error);
+                return alert("No se pudo guardar la cita. Después crearemos la tabla citas_padres en Supabase.");
+            }
+
+            document.getElementById('form-cita').reset();
+            document.getElementById('cita-matricula').value = "";
+            document.getElementById('cita-alumno').value = "";
+            document.getElementById('cita-grupo').value = "";
+            await cargarCitas();
+            alert("Cita guardada correctamente.");
+        }
+
+        function renderizarCitas() {
+            const cuerpo = document.getElementById('tabla-citas-cuerpo');
+            if (!cuerpo) return;
+            const fechaFiltro = document.getElementById('filtro-fecha-citas').value;
+            const estadoFiltro = document.getElementById('filtro-estado-citas').value;
+            let lista = [...citasPadres];
+            if (fechaFiltro) lista = lista.filter(c => c.fecha === fechaFiltro);
+            if (estadoFiltro !== "todos") lista = lista.filter(c => c.estado === estadoFiltro);
+
+            document.getElementById('contador-citas').innerText = `${lista.length} cita${lista.length === 1 ? "" : "s"}`;
+            cuerpo.innerHTML = '';
+            if (lista.length === 0) {
+                cuerpo.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400 italic">No hay citas para mostrar.</td></tr>';
+                return;
+            }
+
+            lista.forEach(c => {
+                const tr = document.createElement('tr');
+                const accionesAdmin = rolActivo === "Administrador" ? `<button onclick="eliminarCita(${c.id})" class="text-red-500 font-bold hover:underline ml-2">Eliminar</button>` : '';
+                tr.innerHTML = `
+                    <td class="px-3 py-2 whitespace-nowrap"><strong>${c.fecha || ""}</strong><br><span class="text-gray-500">${String(c.hora || "").slice(0,5)}</span></td>
+                    <td class="px-3 py-2"><strong>${c.alumno || ""}</strong><br><span class="text-gray-400">${c.matricula || ""} · ${c.grupo || ""}</span></td>
+                    <td class="px-3 py-2">${c.tutor || ""}</td>
+                    <td class="px-3 py-2">${c.motivo || ""}</td>
+                    <td class="px-3 py-2">${c.responsable || ""}</td>
+                    <td class="px-3 py-2"><select onchange="cambiarEstadoCita(${c.id}, this.value)" class="border rounded px-2 py-1 bg-white"><option ${c.estado==='Pendiente'?'selected':''}>Pendiente</option><option ${c.estado==='Confirmada'?'selected':''}>Confirmada</option><option ${c.estado==='Atendida'?'selected':''}>Atendida</option><option ${c.estado==='Cancelada'?'selected':''}>Cancelada</option></select></td>
+                    <td class="px-3 py-2 text-center whitespace-nowrap"><button onclick="verDetalleCita(${c.id})" class="text-utc-blue font-bold hover:underline">Ver</button>${accionesAdmin}</td>`;
+                cuerpo.appendChild(tr);
+            });
+        }
+
+        function limpiarFiltrosCitas() {
+            document.getElementById('filtro-fecha-citas').value = '';
+            document.getElementById('filtro-estado-citas').value = 'todos';
+            renderizarCitas();
+        }
+
+        async function cambiarEstadoCita(id, estado) {
+            const { error } = await supabaseClient.from("citas_padres").update({ estado }).eq("id", id);
+            if (error) return alert("No se pudo actualizar el estado.");
+            const cita = citasPadres.find(c => Number(c.id) === Number(id));
+            if (cita) cita.estado = estado;
+            renderizarCitas();
+        }
+
+        async function eliminarCita(id) {
+            if (rolActivo !== "Administrador") return alert("Solo el Administrador puede eliminar citas.");
+            if (!confirm("¿Desea eliminar esta cita?")) return;
+            const { error } = await supabaseClient.from("citas_padres").delete().eq("id", id);
+            if (error) return alert("No se pudo eliminar la cita.");
+            await cargarCitas();
+        }
+
+        function verDetalleCita(id) {
+            const c = citasPadres.find(x => Number(x.id) === Number(id));
+            if (!c) return;
+            alert(`CITA CON PADRE / TUTOR\n\nAlumno: ${c.alumno}\nMatrícula: ${c.matricula}\nGrupo: ${c.grupo || ""}\nTutor: ${c.tutor}\nFecha: ${c.fecha}\nHora: ${String(c.hora || "").slice(0,5)}\nMotivo: ${c.motivo}\nResponsable: ${c.responsable}\nEstado: ${c.estado}\nObservaciones: ${c.observaciones || "Sin observaciones"}\nCreó: ${c.creado_por || "Sin registro"}`);
+        }
+
+        function fechaLocalISO(fecha = new Date()) {
+            const y = fecha.getFullYear();
+            const m = String(fecha.getMonth() + 1).padStart(2, '0');
+            const d = String(fecha.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function agregarMensajeChat(texto, tipo) {
+            const chat = document.getElementById('chat-citas');
+            const div = document.createElement('div');
+            div.className = tipo === 'usuario' ? 'bg-utc-blue text-white rounded-lg p-3 ml-8' : 'bg-white border rounded-lg p-3 mr-8 text-gray-700';
+            div.textContent = texto;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function preguntarAsistenteCitas(e) {
+            e.preventDefault();
+            const input = document.getElementById('pregunta-citas');
+            const pregunta = input.value.trim();
+            if (!pregunta) return;
+            agregarMensajeChat(pregunta, 'usuario');
+            input.value = '';
+
+            const q = pregunta.toLowerCase();
+            const hoy = new Date();
+            let objetivo = null;
+            let descripcion = '';
+
+            if (q.includes('mañana')) {
+                const manana = new Date(hoy); manana.setDate(manana.getDate() + 1);
+                objetivo = fechaLocalISO(manana); descripcion = 'mañana';
+            } else if (q.includes('hoy')) {
+                objetivo = fechaLocalISO(hoy); descripcion = 'hoy';
+            }
+
+            let lista = [...citasPadres];
+            if (objetivo) lista = lista.filter(c => c.fecha === objetivo);
+            if (q.includes('pendiente')) lista = lista.filter(c => c.estado === 'Pendiente');
+            if (q.includes('confirmada')) lista = lista.filter(c => c.estado === 'Confirmada');
+            if (q.includes('atendida')) lista = lista.filter(c => c.estado === 'Atendida');
+
+            const tokens = q.split(/\s+/).filter(x => x.length >= 4);
+            const persona = lista.filter(c => tokens.some(t => String(c.alumno || '').toLowerCase().includes(t) || String(c.tutor || '').toLowerCase().includes(t) || String(c.responsable || '').toLowerCase().includes(t)));
+            if (persona.length > 0 && !q.includes('cuánt') && !q.includes('cuant')) lista = persona;
+
+            if (lista.length === 0) {
+                agregarMensajeChat(`No encontré citas${descripcion ? ' para ' + descripcion : ''} que coincidan con la consulta.`, 'asistente');
+                return;
+            }
+
+            if (q.includes('cuánt') || q.includes('cuant')) {
+                agregarMensajeChat(`Encontré ${lista.length} cita${lista.length === 1 ? '' : 's'}${descripcion ? ' para ' + descripcion : ''}.`, 'asistente');
+                return;
+            }
+
+            const resumen = lista.slice(0, 8).map(c => `${String(c.hora || '').slice(0,5)} - ${c.alumno} - ${c.tutor} - ${c.motivo} (${c.estado})`).join('\n');
+            agregarMensajeChat(`${descripcion ? 'Citas para ' + descripcion + ':' : 'Citas encontradas:'}\n${resumen}${lista.length > 8 ? `\nY ${lista.length - 8} más.` : ''}`, 'asistente');
+        }
+
         function switchTab(tabId) {
+            if (tabId === 'administracion' && rolActivo !== 'Administrador') return;
+            if (tabId === 'agenda' && !(rolActivo === 'Administrador' || rolActivo === 'Directivo')) return;
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
 
@@ -837,6 +1215,7 @@
             if (window.innerWidth < 768) toggleMenu();
             if (tabId === 'dashboard' || tabId === 'historial') procesarAnaliticas();
             if (tabId === 'administracion') renderizarModuloAdministracion();
+            if (tabId === 'agenda' && (rolActivo === 'Administrador' || rolActivo === 'Directivo')) cargarCitas();
         }
 
         function toggleMenu() {
