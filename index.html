@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Control de Incidencias - UTC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        .bg-utc-blue { background-color: #0d2c54; }
+        .text-utc-blue { color: #0d2c54; }
+        .border-utc-blue { border-color: #0d2c54; }
+        .bg-utc-orange { background-color: #c94a29; }
+        .text-utc-orange { color: #c94a29; }
+        .border-utc-orange { border-color: #c94a29; }
+        .bg-utc-light { background-color: #f8fafc; }
+    </style>
+</head>
+<body class="bg-utc-light text-gray-800 font-sans min-h-screen flex flex-col md:flex-row">
+
+    <div id="pantalla-login" class="fixed inset-0 bg-utc-blue z-[100] flex items-center justify-center p-4">
+        <div class="bg-white p-6 md:p-10 rounded-2xl shadow-2xl max-w-md w-full space-y-6">
+            <div class="text-center">
+                <div class="inline-block bg-utc-blue border-2 border-utc-orange px-6 py-2 rounded-xl shadow-inner">
+                    <div class="font-black tracking-widest leading-none select-none text-4xl">
+                        <span class="text-white">u</span><span class="text-utc-orange">t</span><span class="text-white">c</span>
+                    </div>
+                </div>
+                <p class="text-xs font-bold uppercase tracking-wider text-gray-400 mt-3">Control de Incidencias</p>
+            </div>
+            
+            <form id="form-login-pass" onsubmit="validarPassword(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-utc-blue mb-1">Contraseña del Sistema</label>
+                    <input type="password" id="login-pass" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-utc-blue">
+                </div>
+                <button type="submit" class="w-full bg-utc-orange text-white py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider shadow-md hover:bg-[#b03f22] transition-all">
+                    Verificar Credenciales
+                </button>
+            </form>
+
+            <form id="form-login-cargo" onsubmit="finalizarIngresoOperador(event)" class="space-y-4 hidden">
+                <p class="text-xs text-gray-500 border-l-4 border-utc-orange pl-2 italic">Contraseña correcta. Por favor identifique su cargo y nombre para continuar:</p>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-utc-blue mb-1">¿Qué cargo ostenta?</label>
+                    <select id="login-cargo-tipo" onchange="cargarNombresLogin(this.value)" required class="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                        <option value="">-- Seleccione Cargo --</option>
+                        <option value="Maestro">Maestro / Profesor</option>
+                        <option value="Directivo">Directivo / Consultor</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-utc-blue mb-1">Seleccione su Nombre</label>
+                    <select id="login-cargo-nombre" required class="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
+                        <option value="">-- Seleccione primero el cargo --</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-utc-blue text-white py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider shadow-md hover:bg-[#143d73] transition-all">
+                    Ingresar al Registro
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <aside id="sidebar" class="w-full md:w-64 bg-utc-blue text-white flex flex-col justify-between shadow-xl shrink-0 z-50 hidden">
+        <div class="p-4 md:p-6">
+            <div class="flex md:flex-col items-center justify-between md:justify-center border-b border-white/10 pb-4 md:pb-6">
+                <div class="bg-white/5 border-2 border-utc-orange px-5 py-2 rounded-xl text-center shadow-md">
+                    <div class="font-black tracking-widest leading-none select-none text-3xl md:text-4xl">
+                        <span class="text-white">u</span><span class="text-utc-orange">t</span><span class="text-white">c</span>
+                    </div>
+                </div>
+                <button onclick="toggleMenu()" class="block md:hidden p-2 text-white focus:outline-none focus:bg-white/10 rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+            </div>
+
+            <nav id="menu-items" class="hidden md:block space-y-2 mt-4 md:mt-6 text-base md:text-lg font-semibold">
+                <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-utc-orange text-white transition-all shadow-md">
+                    <span>Dashboard General</span>
+                </button>
+                <button onclick="switchTab('registro')" id="btn-registro" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all">
+                    <span>Registrar Incidencia</span>
+                </button>
+                <button onclick="switchTab('historial')" id="btn-historial" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all">
+                    <span>Historial Alumnos</span>
+                </button>
+                <button onclick="switchTab('administracion')" id="btn-administracion" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all hidden">
+                    <span>Panel de Control (Admin)</span>
+                </button>
+                <button onclick="cerrarSesion()" class="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 transition-all pt-6 border-t border-white/5 font-bold">
+                    <span>Cerrar Sesión</span>
+                </button>
+            </nav>
+        </div>
+        <div id="user-tag" class="p-4 border-t border-white/10 bg-black/10 text-xs text-gray-300 text-center font-bold tracking-wide">
+            Sesión: -
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+        <header class="h-16 bg-white border-b border-gray-200 px-4 md:px-8 flex items-center justify-between shadow-sm">
+            <div>
+                <h1 id="saludo-personalizado" class="text-sm md:text-base font-bold text-utc-blue">Sistema de Convivencia Escolar</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="text-right hidden sm:block">
+                    <p class="text-xs md:text-sm font-black text-utc-blue" id="nombre-header">Pamela Elizabeth</p>
+                    <p id="rol-header" class="text-[10px] uppercase font-bold text-utc-orange tracking-wider">Administrador</p>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-utc-blue border border-utc-orange flex items-center justify-center font-black text-lg text-white shadow-sm tracking-tighter">
+                    u<span class="text-utc-orange">t</span>c
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 p-4 md:p-8">
+            <section id="tab-dashboard" class="tab-content block space-y-6">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-utc-blue tracking-tight">Analíticas Avanzadas de Convivencia</h2>
+                        <p class="text-xs md:text-sm text-gray-500">Métricas generales de la institución configurables por escalas temporales o estudiante.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <select id="filtro-tiempo" onchange="procesarAnaliticas()" class="bg-gray-50 border border-gray-300 text-xs rounded-lg px-3 py-2 text-gray-700 focus:outline-none font-bold">
+                            <option value="todo">Historial Completo</option>
+                            <option value="semana">Esta Semana (Últimos 7 días)</option>
+                            <option value="mes">Este Mes (Últimos 30 días)</option>
+                        </select>
+                        <select id="filtro-grupo" onchange="procesarAnaliticas()" class="bg-gray-50 border border-gray-300 text-xs rounded-lg px-3 py-2 text-gray-700 focus:outline-none max-w-xs font-bold">
+                            <option value="todos">Todos los Grupos</option>
+                        </select>
+                        <select id="filtro-alumno" onchange="procesarAnaliticas()" class="bg-gray-50 border border-gray-300 text-xs rounded-lg px-3 py-2 text-gray-700 focus:outline-none max-w-xs font-bold">
+                            <option value="todos">Todos los Alumnos Registrados</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
+                    <div class="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm border-l-4 border-utc-blue">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Incidencias Coincidentes</p>
+                        <h3 id="kpi-total" class="text-xl md:text-3xl font-black text-utc-blue mt-1">0</h3>
+                    </div>
+                    <div class="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm border-l-4 border-utc-orange">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Eje Académico</p>
+                        <h3 id="kpi-academico" class="text-xl md:text-3xl font-black text-utc-orange mt-1">0</h3>
+                    </div>
+                    <div class="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm border-l-4 border-amber-500">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Eje Conductual</p>
+                        <h3 id="kpi-conducta" class="text-xl md:text-3xl font-black text-amber-500 mt-1">0</h3>
+                    </div>
+                    <div class="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm border-l-4 border-teal-600">
+                        <p class="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Eje Emocional</p>
+                        <h3 id="kpi-emocional" class="text-xl md:text-3xl font-black text-teal-600 mt-1">0</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h4 class="text-[10px] md:text-xs font-bold text-gray-400 mb-4 uppercase tracking-wider">Flujo Cronológico</h4>
+                        <div class="h-48 md:h-64"><canvas id="chartFlujoSemanal"></canvas></div>
+                    </div>
+                    <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h4 class="text-[10px] md:text-xs font-bold text-gray-400 mb-4 uppercase tracking-wider">Distribución por Escalas de Atención</h4>
+                        <div class="h-48 md:h-64 flex justify-center"><canvas id="chartTipoIncidencia"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-registro" class="tab-content hidden max-w-5xl mx-auto">
+                <div class="bg-white p-5 md:p-10 rounded-2xl border border-gray-200 shadow-xl">
+                    <div class="mb-6 md:mb-8 border-b border-gray-100 pb-4">
+                        <h2 class="text-xl md:text-2xl font-extrabold text-utc-blue">Inscripción Formal de Incidencia</h2>
+                        <p class="text-xs md:text-sm text-gray-500 mt-1">Escriba el nombre o matrícula del alumno cargado en la base de datos.</p>
+                    </div>
+                    <form id="form-incidencia" onsubmit="guardarIncidencia(event)" class="space-y-4 md:space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                            <div class="relative">
+                                <label class="block text-[10px] md:text-xs font-bold uppercase tracking-wider text-utc-blue mb-1 md:mb-2">Matrícula o Busqueda Predictiva</label>
+                                <input type="text" id="matricula" oninput="buscarAlumnoPredictivo(this.value)" autocomplete="off" required placeholder="Escriba matrícula o nombre..." class="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-utc-blue/20 focus:border-utc-blue transition-all">
+                                <div id="sugerencias-alumno" class="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto z-50 hidden text-xs md:text-sm"></div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-[10px] md:text-xs font-bold uppercase tracking-wider text-utc-blue mb-1 md:mb-2">Nombre Completo del Alumno</label>
+                                <input type="text" id="nombre" readonly required placeholder="Se auto-rellena seleccionando de la lista..." class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-gray-500 focus:outline-none cursor-not-allowed">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                            <div>
+                                <label class="block text-[10px] md:text-xs font-bold uppercase tracking-wider text-utc-blue mb-1 md:mb-2">Grupo / Cuatrimestre</label>
+                                <input type="text" id="grupo" readonly required placeholder="Se auto-rellena..." class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 md:py-3 text-sm md:text-base text-gray-500 focus:outline-none cursor-not-allowed">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-[10px] md:text-xs font-bold uppercase tracking-wider text-utc-blue mb-1 md:mb-2">Tipo de incidencia</label>
+                                <div class="grid grid-cols-3 gap-1.5 md:gap-2">
+                                    <button type="button" onclick="selectCategoria('Académica')" id="cat-Académica" class="cat-btn py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-bold border rounded-lg transition-all text-gray-600 bg-gray-50 hover:bg-gray-100">Académica</button>
+                                    <button type="button" onclick="selectCategoria('Conductual')" id="cat-Conductual" class="cat-btn py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-bold border rounded-lg transition-all text-gray-600 bg-gray-50 hover:bg-gray-100">Conductual</button>
+                                    <button type="button" onclick="selectCategoria('Emocional')" id="cat-Emocional" class="cat-btn py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-bold border rounded-lg transition-all text-gray-600 bg-gray-50 hover:bg-gray-100">Emocional</button>
+                                </div>
+                                <input type="hidden" id="categoria-seleccionada" required>
+                            </div>
+                        </div>
+                        <div id="contenedor-subcategoria" class="hidden transition-all duration-300">
+                            <label class="block text-[10px] md:text-xs font-bold uppercase tracking-wider text-utc-blue mb-1 md:mb-2">Seleccione la Causa Específica</label>
+                            <select id="subcategoria" required class="w-full bg-gray-50 border-2 border-utc-orange rounded-lg px-3 py-2 md:py-3 text-sm md:text-base text-gray-800 focus:outline-none bg-white"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] md:text-xs font-bold uppercase tracking-wider text-utc-blue mb-1 md:mb-2">Anotaciones Complementarias</label>
+                            <textarea id="descripcion" rows="4" required class="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 md:py-3 text-sm md:text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-utc-blue/20 focus:border-utc-blue transition-all resize-none"></textarea>
+                        </div>
+                        <div class="pt-2">
+                            <button type="submit" class="w-full bg-utc-blue hover:bg-[#143d73] text-white text-xs md:text-sm font-bold uppercase tracking-widest py-3 md:py-4 rounded-xl transition-all shadow-md">Registrar en Expediente General</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <section id="tab-historial" class="tab-content hidden space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <h2 class="text-xl font-bold text-utc-blue">Registros Almacenados</h2>
+                        <p class="text-xs md:text-sm text-gray-500">Historial centralizado institucional.</p>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button onclick="actualizarHistorial()" class="flex-1 sm:flex-none bg-utc-blue hover:bg-[#143d73] text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg transition-all shadow-sm text-center">Actualizar</button>
+                        <div id="zona-exportar" class="flex gap-2 flex-1 sm:flex-none hidden">
+                            <button onclick="exportarExcel()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg transition-all shadow-sm text-center">Exportar Excel</button>
+                            <button onclick="exportarPDF()" class="flex-1 sm:flex-none bg-utc-orange hover:bg-[#b03f22] text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg transition-all shadow-sm text-center">Exportar PDF</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-md">
+                    <table class="min-w-full divide-y divide-gray-200 table-auto">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Fecha</th>
+                                <th class="px-4 py-3 text-left text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Matrícula</th>
+                                <th class="px-4 py-3 text-left text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Alumno</th>
+                                <th class="px-4 py-3 text-left text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Grupo</th>
+                                <th class="px-4 py-3 text-left text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Área / Tipo</th>
+                                <th class="px-4 py-3 text-left text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Autor del Reporte</th>
+                                <th class="px-4 py-3 text-left text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Hecho Reportado</th>
+                                <th class="px-4 py-3 text-center text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider th-eliminar-registro hidden">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-cuerpo" class="divide-y divide-gray-100 text-xs md:text-sm text-gray-700 bg-white"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="tab-administracion" class="tab-content hidden space-y-6 max-w-6xl mx-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-md lg:col-span-1 space-y-4">
+                        <h3 class="text-base font-extrabold text-utc-blue border-b pb-2">1. Base de Alumnos (Carga Masiva)</h3>
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center bg-gray-50">
+                            <input type="file" id="excel-file-input" accept=".xlsx, .xls" class="hidden" onchange="importarExcelAlumnosMasivo(event)">
+                            <label for="excel-file-input" class="cursor-pointer block space-y-2">
+                                <span class="block text-xs font-bold uppercase text-utc-orange bg-white border border-gray-300 px-3 py-1.5 rounded-lg shadow-sm hover:bg-gray-50">Subir Archivo Excel</span>
+                            </label>
+                        </div>
+                        <div id="info-alumnos-count" class="text-xs font-bold text-gray-500">Alumnos en memoria: 0</div>
+                        
+                        <h4 class="text-xs font-black text-utc-blue uppercase tracking-wider pt-2">Agregar Estudiante Manual</h4>
+                        <div class="space-y-2 text-xs">
+                            <input type="text" id="crud-al-mat" placeholder="Matrícula" class="w-full border p-2 rounded">
+                            <input type="text" id="crud-al-nom" placeholder="Nombre Completo" class="w-full border p-2 rounded">
+                            <input type="text" id="crud-al-gru" placeholder="Grupo / Cuatrimestre" class="w-full border p-2 rounded">
+                            <button onclick="guardarAlumnoManual()" class="w-full bg-utc-blue text-white py-1.5 rounded font-bold uppercase tracking-wider">Guardar Alumno</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-md lg:col-span-2 space-y-3">
+                        <h3 class="text-base font-extrabold text-utc-blue">Catálogo de Alumnos Activos</h3>
+                        <div class="overflow-y-auto max-h-64 border rounded-xl text-xs">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left">Matrícula</th>
+                                        <th class="px-3 py-2 text-left">Nombre</th>
+                                        <th class="px-3 py-2 text-left">Grupo</th>
+                                        <th class="px-3 py-2 text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="crud-alumnos-cuerpo" class="divide-y bg-white"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-md space-y-4">
+                        <h3 class="text-base font-extrabold text-utc-blue border-b pb-2">Gestión de Maestros</h3>
+                        <div class="flex gap-2">
+                            <input type="text" id="input-nuevo-maestro" placeholder="Nombre del docente..." class="flex-1 text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none">
+                            <button onclick="agregarPersonal('maestros')" class="bg-utc-orange text-white text-xs font-bold uppercase px-4 py-2 rounded-lg">Añadir</button>
+                        </div>
+                        <ul id="lista-maestros" class="divide-y text-xs max-h-40 overflow-y-auto border rounded-xl p-2 bg-gray-50"></ul>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-md space-y-4">
+                        <h3 class="text-base font-extrabold text-utc-blue border-b pb-2">Gestión de Directivos / Consultores</h3>
+                        <div class="flex gap-2">
+                            <input type="text" id="input-nuevo-directivo" placeholder="Nombre del directivo..." class="flex-1 text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none">
+                            <button onclick="agregarPersonal('directivos')" class="bg-utc-blue text-white text-xs font-bold uppercase px-4 py-2 rounded-lg">Añadir</button>
+                        </div>
+                        <ul id="lista-directivos" class="divide-y text-xs max-h-40 overflow-y-auto border rounded-xl p-2 bg-gray-50"></ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN DE ACCESOS
+        const PASS_ADMIN = "UTCadmin2026";
+        const PASS_OPERADOR = "UTCoperador2026";
+
+        // CONFIGURACIÓN SUPABASE
+        const SUPABASE_URL = "https://uldfgofzalpfzexfsspl.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZGZnb2Z6YWxwZnpleGZzc3BsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MjUwMTQsImV4cCI6MjA5OTEwMTAxNH0.FRtbuw2njwNBSeH_qpbHvkHnCmfB00fnxE2c6D4ZSQI";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const opcionesCatalogo = {
+            "Académica": ["Adeudo de extraordinarios", "Bajo rendimiento académico", "Falsificar justificantes", "Inasistencias recurrentes", "No poner atención en clase", "No trabajar en clase"],
+            "Conductual": ["Agresiones físicas", "Aventar objetos hacia la calle", "Comer en clase", "Consumir y/o portar sustancias ilícitas", "Daño al inmueble", "Falta de respeto al docente", "Falta de respeto al personal administrativo", "Grafiti en la pared", "Grabaciones / fotos de otra persona sin autorización", "Grosería hacia compañeros", "Hostigamiento verbal", "Jugar videojuegos en clase", "No bajar a receso", "No portar correctamente el uniforme", "No sentarse en su lugar asignado", "Posesión de objetos no permitidos", "Quedarse dormido en clase", "Salir del salón sin autorización", "Tomar sin permiso pertenencias ajenas", "Uso no autorizado de celular/audifonos"],
+            "Emocional": ["Canalización por conducta", "Crisis de ansiedad", "Mediación de conflictos entre alumnos", "Orientación para el aprendizaje", "Orientación psicoemocional", "Seguimiento externo"]
+        };
+
+        let usuarioActivo = { nombre: "Pamela Elizabeth", cargo: "Administrador" };
+        let rolActivo = null;
+        let incidencias = [];
+        let baseAlumnos = [];
+        let listaMaestros = ["Fulanito de Tal", "Profesora García"];
+        let listaDirectivos = ["Consultora Martínez", "Director General"];
+        let personalMaestros = [];
+        let personalDirectivos = [];
+        let chartFlujo, chartTipo;
+
+        function obtenerAutorReporte(i) {
+            return i.usuarioRegistro || i.usuario_registro || i.usuarioregistro || "Sin autor registrado";
+        }
+
+        function normalizarIncidencia(i) {
+            return {
+                ...i,
+                usuarioRegistro: obtenerAutorReporte(i)
+            };
+        }
+
+        async function cargarDatosSupabase() {
+            try {
+                const [resIncidencias, resAlumnos, resPersonal] = await Promise.all([
+                    supabaseClient.from("incidencias").select("*").order("timestamp", { ascending: false }),
+                    supabaseClient.from("alumnos").select("*").order("nombre", { ascending: true }),
+                    supabaseClient.from("personal").select("*").order("nombre", { ascending: true })
+                ]);
+
+                if (resIncidencias.error) throw resIncidencias.error;
+                if (resAlumnos.error) throw resAlumnos.error;
+                if (resPersonal.error) throw resPersonal.error;
+
+                incidencias = (resIncidencias.data || []).map(normalizarIncidencia);
+                baseAlumnos = resAlumnos.data || [];
+
+                personalMaestros = (resPersonal.data || []).filter(p => p.tipo === "maestros");
+                personalDirectivos = (resPersonal.data || []).filter(p => p.tipo === "directivos");
+
+                listaMaestros = personalMaestros.map(p => p.nombre);
+                listaDirectivos = personalDirectivos.map(p => p.nombre);
+
+                if (listaMaestros.length === 0) listaMaestros = ["Fulanito de Tal", "Profesora García"];
+                if (listaDirectivos.length === 0) listaDirectivos = ["Consultora Martínez", "Director General"];
+
+                actualizarSelectorAlumnos();
+                procesarAnaliticas();
+
+                if (rolActivo === "Administrador") {
+                    renderizarModuloAdministracion();
+                }
+            } catch (error) {
+                console.error("Error cargando Supabase:", error);
+                alert("No se pudieron cargar los datos de Supabase. Revisa internet, tablas y políticas RLS.");
+            }
+        }
+
+        function validarPassword(e) {
+            e.preventDefault();
+            const passInput = document.getElementById('login-pass').value;
+
+            if (passInput === PASS_ADMIN) {
+                rolActivo = "Administrador";
+                usuarioActivo = { nombre: "Pamela Elizabeth", cargo: "Administrador" };
+                ingresarAlSistema();
+            } else if (passInput === PASS_OPERADOR) {
+                rolActivo = "Operador";
+                document.getElementById('form-login-pass').classList.add('hidden');
+                document.getElementById('form-login-cargo').classList.remove('hidden');
+            } else {
+                alert("Contraseña institucional incorrecta.");
+            }
+        }
+
+        function cargarNombresLogin(cargo) {
+            const select = document.getElementById('login-cargo-nombre');
+            select.innerHTML = '<option value="">-- Seleccione Nombre --</option>';
+            let fuente = (cargo === "Maestro") ? listaMaestros : listaDirectivos;
+            if (!cargo) return;
+
+            fuente.sort().forEach(n => {
+                let opt = document.createElement('option');
+                opt.value = n;
+                opt.textContent = n;
+                select.appendChild(opt);
+            });
+        }
+
+        function finalizarIngresoOperador(e) {
+            e.preventDefault();
+            const cargo = document.getElementById('login-cargo-tipo').value;
+            const nombre = document.getElementById('login-cargo-nombre').value;
+
+            usuarioActivo = { nombre: nombre, cargo: cargo };
+            ingresarAlSistema();
+        }
+
+        async function ingresarAlSistema() {
+            document.getElementById('pantalla-login').classList.add('hidden');
+            document.getElementById('sidebar').classList.remove('hidden');
+
+            document.getElementById('nombre-header').innerText = usuarioActivo.nombre;
+            document.getElementById('rol-header').innerText = usuarioActivo.cargo;
+            document.getElementById('user-tag').innerText = `Sesión: ${usuarioActivo.nombre} (${usuarioActivo.cargo})`;
+            document.getElementById('saludo-personalizado').innerText = `¡Hola, ${usuarioActivo.cargo} ${usuarioActivo.nombre}!`;
+
+            const btnAdmin = document.getElementById('btn-administracion');
+            const zonaExportar = document.getElementById('zona-exportar');
+            const columnasEliminar = document.querySelectorAll('.th-eliminar-registro');
+
+            if (rolActivo === "Administrador") {
+                btnAdmin.classList.remove('hidden');
+                zonaExportar.classList.remove('hidden');
+                columnasEliminar.forEach(c => c.classList.remove('hidden'));
+            } else {
+                btnAdmin.classList.add('hidden');
+                zonaExportar.classList.add('hidden');
+                columnasEliminar.forEach(c => c.classList.add('hidden'));
+                switchTab('registro');
+            }
+
+            inicializarGraficas();
+            await cargarDatosSupabase();
+        }
+
+        function cerrarSesion() {
+            rolActivo = null;
+            document.getElementById('form-incidencia').reset();
+            document.getElementById('login-pass').value = "";
+            document.getElementById('login-cargo-tipo').value = "";
+            document.getElementById('login-cargo-nombre').innerHTML = '<option value="">-- Seleccione primero el cargo --</option>';
+
+            document.getElementById('form-login-cargo').classList.add('hidden');
+            document.getElementById('form-login-pass').classList.remove('hidden');
+            document.getElementById('pantalla-login').classList.remove('hidden');
+            document.getElementById('sidebar').classList.add('hidden');
+        }
+
+        function renderizarModuloAdministracion() {
+            document.getElementById('info-alumnos-count').innerText = `Alumnos en Supabase: ${baseAlumnos.length}`;
+
+            const cuerpoAl = document.getElementById('crud-alumnos-cuerpo');
+            cuerpoAl.innerHTML = '';
+
+            if (baseAlumnos.length === 0) {
+                cuerpoAl.innerHTML = `<tr><td colspan="4" class="px-3 py-4 text-center text-gray-400 italic">No hay alumnos registrados.</td></tr>`;
+            }
+
+            baseAlumnos.forEach((al) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-3 py-1.5 font-bold text-utc-blue">${al.matricula || ""}</td>
+                    <td class="px-3 py-1.5">${al.nombre || ""}</td>
+                    <td class="px-3 py-1.5 font-semibold text-utc-orange">${al.grupo || ""}</td>
+                    <td class="px-3 py-1.5 text-center"><button onclick="eliminarAlumnoCat(${al.id})" class="text-red-500 font-bold hover:underline">Eliminar</button></td>
+                `;
+                cuerpoAl.appendChild(tr);
+            });
+
+            const ulM = document.getElementById('lista-maestros');
+            ulM.innerHTML = '';
+            personalMaestros.forEach((m) => {
+                ulM.innerHTML += `<li class="flex justify-between py-1 border-b"><span>${m.nombre}</span><button onclick="eliminarPersonal('maestros', ${m.id})" class="text-red-500 font-bold hover:underline">X</button></li>`;
+            });
+            if (personalMaestros.length === 0) {
+                ulM.innerHTML = `<li class="py-2 text-gray-400 italic">Sin maestros en Supabase.</li>`;
+            }
+
+            const ulD = document.getElementById('lista-directivos');
+            ulD.innerHTML = '';
+            personalDirectivos.forEach((d) => {
+                ulD.innerHTML += `<li class="flex justify-between py-1 border-b"><span>${d.nombre}</span><button onclick="eliminarPersonal('directivos', ${d.id})" class="text-red-500 font-bold hover:underline">X</button></li>`;
+            });
+            if (personalDirectivos.length === 0) {
+                ulD.innerHTML = `<li class="py-2 text-gray-400 italic">Sin directivos en Supabase.</li>`;
+            }
+        }
+
+        async function importarExcelAlumnosMasivo(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const wb = XLSX.read(data, { type: 'array' });
+                    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+
+                    const alumnosImportados = json.map(f => {
+                        let r = { matricula: '', nombre: '', grupo: '' };
+                        Object.keys(f).forEach(k => {
+                            let l = k.toLowerCase().trim();
+                            if (l.includes('matricula') || l.includes('matrícula')) r.matricula = String(f[k]).trim();
+                            if (l.includes('nombre')) r.nombre = String(f[k]).trim();
+                            if (l.includes('grupo') || l.includes('cuatrimestre')) r.grupo = String(f[k]).trim();
+                        });
+                        return r;
+                    }).filter(r => r.matricula && r.nombre);
+
+                    if (alumnosImportados.length === 0) {
+                        alert("No se encontraron alumnos válidos. Revisa que el Excel tenga matrícula, nombre y grupo.");
+                        return;
+                    }
+
+                    const { error } = await supabaseClient.from("alumnos").insert(alumnosImportados);
+                    if (error) throw error;
+
+                    await cargarDatosSupabase();
+                    alert("Base de alumnos importada con éxito en Supabase.");
+                    e.target.value = "";
+                } catch (error) {
+                    console.error(error);
+                    alert("Error al importar alumnos. Si hay matrículas repetidas, elimina duplicados del Excel o de Supabase.");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function guardarAlumnoManual() {
+            const mat = document.getElementById('crud-al-mat').value.trim();
+            const nom = document.getElementById('crud-al-nom').value.trim();
+            const gru = document.getElementById('crud-al-gru').value.trim();
+
+            if (!mat || !nom || !gru) return alert("Rellene todos los campos del estudiante.");
+
+            const { error } = await supabaseClient.from("alumnos").insert([{ matricula: mat, nombre: nom, grupo: gru }]);
+            if (error) {
+                console.error(error);
+                return alert("No se pudo guardar el alumno. Verifica que la matrícula no esté repetida.");
+            }
+
+            document.getElementById('crud-al-mat').value = "";
+            document.getElementById('crud-al-nom').value = "";
+            document.getElementById('crud-al-gru').value = "";
+            await cargarDatosSupabase();
+        }
+
+        async function eliminarAlumnoCat(id) {
+            if (confirm("¿Desea dar de baja este estudiante de la base general?")) {
+                const { error } = await supabaseClient.from("alumnos").delete().eq("id", id);
+                if (error) {
+                    console.error(error);
+                    return alert("No se pudo eliminar el alumno.");
+                }
+                await cargarDatosSupabase();
+            }
+        }
+
+        async function agregarPersonal(tipo) {
+            let val = "";
+            if (tipo === 'maestros') {
+                val = document.getElementById('input-nuevo-maestro').value.trim();
+            } else {
+                val = document.getElementById('input-nuevo-directivo').value.trim();
+            }
+
+            if (!val) return;
+
+            const { error } = await supabaseClient.from("personal").insert([{ nombre: val, tipo: tipo }]);
+            if (error) {
+                console.error(error);
+                return alert("No se pudo guardar el personal.");
+            }
+
+            if (tipo === 'maestros') document.getElementById('input-nuevo-maestro').value = "";
+            else document.getElementById('input-nuevo-directivo').value = "";
+
+            await cargarDatosSupabase();
+        }
+
+        async function eliminarPersonal(tipo, id) {
+            const { error } = await supabaseClient.from("personal").delete().eq("id", id);
+            if (error) {
+                console.error(error);
+                return alert("No se pudo eliminar el registro.");
+            }
+            await cargarDatosSupabase();
+        }
+
+        function buscarAlumnoPredictivo(valor) {
+            const contenedor = document.getElementById('sugerencias-alumno');
+            contenedor.innerHTML = '';
+            const busqueda = valor.toLowerCase().trim();
+            if (busqueda.length < 2) return contenedor.classList.add('hidden');
+
+            const coincidencias = baseAlumnos
+                .filter(a =>
+                    String(a.matricula || "").toLowerCase().includes(busqueda) ||
+                    String(a.nombre || "").toLowerCase().includes(busqueda)
+                )
+                .slice(0, 5);
+
+            if (coincidencias.length === 0) {
+                contenedor.innerHTML = `<div class="p-2 text-gray-400 italic">No registrado en base.</div>`;
+                return contenedor.classList.remove('hidden');
+            }
+
+            coincidencias.forEach(a => {
+                const item = document.createElement('div');
+                item.className = "p-2 hover:bg-gray-100 cursor-pointer border-b text-gray-700 font-medium";
+                item.innerHTML = `<span class="text-utc-orange font-bold">[${a.matricula}]</span> ${a.nombre}`;
+                item.onclick = function() {
+                    document.getElementById('matricula').value = a.matricula || "";
+                    document.getElementById('nombre').value = a.nombre || "";
+                    document.getElementById('grupo').value = a.grupo || "";
+                    contenedor.classList.add('hidden');
+                };
+                contenedor.appendChild(item);
+            });
+            contenedor.classList.remove('hidden');
+        }
+
+        document.addEventListener('click', e => {
+            const sugerencias = document.getElementById('sugerencias-alumno');
+            if (sugerencias && e.target.id !== 'matricula') sugerencias.classList.add('hidden');
+        });
+
+        function actualizarSelectorAlumnos() {
+            const selectorAlumno = document.getElementById('filtro-alumno');
+            selectorAlumno.innerHTML = '<option value="todos">Todos los Alumnos Registrados</option>';
+            const alumnosUnicos = [...new Set(incidencias.map(i => i.nombre).filter(Boolean))].sort();
+            alumnosUnicos.forEach(alumno => {
+                const opt = document.createElement('option');
+                opt.value = alumno;
+                opt.textContent = alumno;
+                selectorAlumno.appendChild(opt);
+            });
+
+            const selectorGrupo = document.getElementById('filtro-grupo');
+            selectorGrupo.innerHTML = '<option value="todos">Todos los Grupos</option>';
+            const gruposUnicos = [...new Set(incidencias.map(i => i.grupo).filter(Boolean))].sort();
+            gruposUnicos.forEach(grupo => {
+                const opt = document.createElement('option');
+                opt.value = grupo;
+                opt.textContent = grupo;
+                selectorGrupo.appendChild(opt);
+            });
+        }
+
+        function procesarAnaliticas() {
+            const filtroTiempo = document.getElementById('filtro-tiempo').value;
+            const filtroAlumno = document.getElementById('filtro-alumno').value;
+            const filtroGrupo = document.getElementById('filtro-grupo').value;
+            const buscador = document.getElementById('buscador-global');
+            const buscadorGlobal = buscador ? buscador.value.toLowerCase().trim() : "";
+
+            let filtradas = [...incidencias];
+            const ahora = Date.now();
+
+            if (filtroTiempo === 'semana') {
+                filtradas = filtradas.filter(i => (ahora - Number(i.timestamp || ahora)) <= 7 * 24 * 60 * 60 * 1000);
+            } else if (filtroTiempo === 'mes') {
+                filtradas = filtradas.filter(i => (ahora - Number(i.timestamp || ahora)) <= 30 * 24 * 60 * 60 * 1000);
+            }
+
+            if (filtroGrupo !== 'todos') filtradas = filtradas.filter(i => i.grupo === filtroGrupo);
+            if (filtroAlumno !== 'todos') filtradas = filtradas.filter(i => i.nombre === filtroAlumno);
+            if (buscadorGlobal !== "") {
+                filtradas = filtradas.filter(i =>
+                    String(i.nombre || "").toLowerCase().includes(buscadorGlobal) ||
+                    String(i.matricula || "").toLowerCase().includes(buscadorGlobal)
+                );
+            }
+
+            const total = filtradas.length;
+            const academico = filtradas.filter(i => i.eje === 'Académica').length;
+            const conducta = filtradas.filter(i => i.eje === 'Conductual').length;
+            const emocional = filtradas.filter(i => i.eje === 'Emocional').length;
+
+            document.getElementById('kpi-total').innerText = total;
+            document.getElementById('kpi-academico').innerText = academico;
+            document.getElementById('kpi-conducta').innerText = conducta;
+            document.getElementById('kpi-emocional').innerText = emocional;
+
+            const cuerpo = document.getElementById('tabla-cuerpo');
+            cuerpo.innerHTML = '';
+
+            if (total === 0) {
+                cuerpo.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-gray-400 italic">No se hallaron coincidencias.</td></tr>`;
+            } else {
+                const ordenadas = [...filtradas].sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+                ordenadas.forEach(item => {
+                    const fila = document.createElement('tr');
+                    fila.innerHTML = `
+                        <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-500">${item.fecha || ""}</td>
+                        <td class="px-4 py-3 whitespace-nowrap font-bold text-utc-blue">${item.matricula || ""}</td>
+                        <td class="px-4 py-3 whitespace-nowrap font-medium text-gray-900">${item.nombre || ""}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">${item.grupo || ""}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-xs font-bold ${item.eje==='Académica'?'text-utc-orange':item.eje==='Conductual'?'text-amber-600':'text-teal-600'}">${item.tipo || ""}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-xs font-bold uppercase text-gray-600">${obtenerAutorReporte(item)}</td>
+                        <td class="px-4 py-3 text-xs text-gray-500 max-w-xs truncate" title="${item.descripcion || ""}">${item.descripcion || ""}</td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap th-eliminar-registro ${rolActivo !== "Administrador" ? "hidden" : ""}">
+                            <button onclick="eliminarIncidenciaHistorial(${item.id})" class="text-red-500 font-bold hover:underline">Borrar</button>
+                        </td>
+                    `;
+                    cuerpo.appendChild(fila);
+                });
+            }
+
+            if (chartTipo && chartFlujo) {
+                chartTipo.data.datasets[0].data = [academico, conducta, emocional];
+                chartFlujo.data.datasets[0].data = [academico, total, conducta, emocional, total / 2];
+                chartTipo.update();
+                chartFlujo.update();
+            }
+        }
+
+
+        async function actualizarHistorial() {
+            await cargarDatosSupabase();
+            procesarAnaliticas();
+            alert("Historial actualizado correctamente.");
+        }
+
+        async function eliminarIncidenciaHistorial(id) {
+            if (confirm("¿Está seguro de eliminar formalmente este registro del historial institucional?")) {
+                const { error } = await supabaseClient.from("incidencias").delete().eq("id", id);
+                if (error) {
+                    console.error(error);
+                    return alert("No se pudo eliminar la incidencia.");
+                }
+                await cargarDatosSupabase();
+            }
+        }
+
+        async function guardarIncidencia(e) {
+            e.preventDefault();
+            const cat = document.getElementById('categoria-seleccionada').value;
+            if (!cat) return alert('Por favor elija una categoría.');
+
+            const nuevaIncidencia = {
+                fecha: new Date().toLocaleDateString('es-MX'),
+                timestamp: Date.now(),
+                matricula: document.getElementById('matricula').value.trim(),
+                nombre: document.getElementById('nombre').value.trim(),
+                grupo: document.getElementById('grupo').value.trim(),
+                tipo: `${cat} - ${document.getElementById('subcategoria').value}`,
+                descripcion: document.getElementById('descripcion').value.trim(),
+                eje: cat,
+                usuario_registro: `${usuarioActivo.cargo}: ${usuarioActivo.nombre}`,
+                usuarioregistro: `${usuarioActivo.cargo}: ${usuarioActivo.nombre}`
+            };
+
+            const { error } = await supabaseClient.from("incidencias").insert([nuevaIncidencia]);
+            if (error) {
+                console.error(error);
+                alert(error.message || "No se pudo registrar la incidencia en Supabase.");
+                return;
+            }
+
+            document.getElementById('form-incidencia').reset();
+            document.getElementById('contenedor-subcategoria').classList.add('hidden');
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.classList.remove('bg-utc-orange', 'bg-utc-blue', 'bg-teal-600', 'text-white');
+                b.classList.add('bg-gray-50', 'text-gray-600');
+            });
+            document.getElementById('categoria-seleccionada').value = "";
+
+            alert('Incidencia registrada en Supabase.');
+            await cargarDatosSupabase();
+            switchTab('dashboard');
+        }
+
+        function selectCategoria(cat) {
+            document.getElementById('categoria-seleccionada').value = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.classList.remove('bg-utc-orange', 'text-white', 'border-utc-orange', 'bg-utc-blue', 'bg-teal-600', 'border-utc-blue', 'border-teal-600');
+                btn.classList.add('bg-gray-50', 'text-gray-600');
+            });
+
+            const activeBtn = document.getElementById(`cat-${cat}`);
+            activeBtn.classList.remove('bg-gray-50', 'text-gray-600');
+
+            if (cat === 'Académica') activeBtn.classList.add('bg-utc-orange', 'text-white', 'border-utc-orange');
+            if (cat === 'Conductual') activeBtn.classList.add('bg-utc-blue', 'text-white', 'border-utc-blue');
+            if (cat === 'Emocional') activeBtn.classList.add('bg-teal-600', 'text-white', 'border-teal-600');
+
+            const contenedor = document.getElementById('contenedor-subcategoria');
+            const selectSub = document.getElementById('subcategoria');
+            selectSub.innerHTML = '<option value="">-- Seleccione la causa --</option>';
+            opcionesCatalogo[cat].forEach(opc => {
+                let optEl = document.createElement('option');
+                optEl.value = opc;
+                optEl.textContent = opc;
+                selectSub.appendChild(optEl);
+            });
+            contenedor.classList.remove('hidden');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-utc-orange', 'text-white', 'shadow-md');
+                el.classList.add('text-gray-300', 'hover:bg-white/10', 'hover:text-white');
+            });
+
+            document.getElementById(`btn-${tabId}`).classList.remove('text-gray-300', 'hover:bg-white/10', 'hover:text-white');
+            document.getElementById(`btn-${tabId}`).classList.add('bg-utc-orange', 'text-white', 'shadow-md');
+
+            if (window.innerWidth < 768) toggleMenu();
+            if (tabId === 'dashboard' || tabId === 'historial') procesarAnaliticas();
+            if (tabId === 'administracion') renderizarModuloAdministracion();
+        }
+
+        function toggleMenu() {
+            document.getElementById('menu-items').classList.toggle('hidden');
+        }
+
+        function filtrarPorBuscador() {
+            procesarAnaliticas();
+        }
+
+        function inicializarGraficas() {
+            if (chartFlujo || chartTipo) return;
+
+            const ctxFlujo = document.getElementById('chartFlujoSemanal').getContext('2d');
+            chartFlujo = new Chart(ctxFlujo, {
+                type: 'line',
+                data: {
+                    labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
+                    datasets: [{
+                        label: 'Volumen',
+                        data: [0, 0, 0, 0, 0],
+                        borderColor: '#c94a29',
+                        backgroundColor: 'rgba(201, 74, 41, 0.05)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            const ctxTipo = document.getElementById('chartTipoIncidencia').getContext('2d');
+            chartTipo = new Chart(ctxTipo, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Académica', 'Conductual', 'Emocional'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: ['#c94a29', '#0d2c54', '#0d9488'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 10, font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportarExcel() {
+            if (incidencias.length === 0) return alert('No hay datos.');
+            const hoja = XLSX.utils.json_to_sheet(incidencias.map(i => ({
+                Fecha: i.fecha,
+                Matrícula: i.matricula,
+                Alumno: i.nombre,
+                Grupo: i.grupo,
+                Incidencia: i.tipo,
+                "Reportó (Cargo y Nombre)": obtenerAutorReporte(i),
+                Detalles: i.descripcion
+            })));
+            const libro = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(libro, hoja, "Incidencias UTC");
+            XLSX.writeFile(libro, `Reporte_General_Incidencias_UTC.xlsx`);
+        }
+
+        function exportarPDF() {
+            if (incidencias.length === 0) return alert('No hay datos.');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(12);
+            doc.setTextColor(13, 44, 84);
+            doc.text("UNIVERSIDAD TRES CULTURAS - EXPEDIENTE CENTRAL DE INCIDENCIAS", 14, 20);
+
+            const columnas = ["Fecha", "Matrícula", "Alumno", "Grupo", "Tipo Incidencia", "Quién Reportó", "Detalles"];
+            const filas = incidencias.map(i => [i.fecha, i.matricula, i.nombre, i.grupo, i.tipo, obtenerAutorReporte(i), i.descripcion]);
+
+            doc.autoTable({
+                startY: 26,
+                head: [columnas],
+                body: filas,
+                headStyles: { fillColor: [13, 44, 84] },
+                styles: { fontSize: 7 }
+            });
+
+            doc.save(`Expediente_Incidencias_UTC.pdf`);
+        }
+    </script>
+
+</body>
+</html>
