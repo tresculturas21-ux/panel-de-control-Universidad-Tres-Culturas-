@@ -497,8 +497,9 @@
             try {
                 // Esta función RPC se creará después en Supabase y regresará:
                 // { valido: true, rol: "Administrador" | "Maestro" | "Directivo" }
-                const { data, error } = await supabaseClient.rpc('validar_acceso', { password_input: passInput });
-                if (error) throw error;
+                const { data, error } = await supabaseClient.rpc('validar_acceso_utc', {
+             password_input: passInput
+              });
 
                 const respuesta = Array.isArray(data) ? data[0] : data;
                 if (!respuesta || respuesta.valido !== true) {
@@ -524,8 +525,7 @@
                 prepararIdentificacionPersonal(respuesta.rol);
             } catch (error) {
                 console.error("Error validando acceso:", error);
-                alert("Aún falta crear la función segura validar_acceso en Supabase. El index ya está preparado para usarla.");
-            } finally {
+               alert("No se pudo validar el acceso. Revisa la consola para ver el error de Supabase.");
                 boton.disabled = false;
                 boton.innerText = "VERIFICAR CREDENCIALES";
             }
