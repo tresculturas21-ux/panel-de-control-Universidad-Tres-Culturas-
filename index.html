@@ -358,6 +358,23 @@
             </section>
 
             <section id="tab-administracion" class="tab-content hidden space-y-6 max-w-6xl mx-auto">
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-md space-y-4">
+                    <div>
+                        <h3 class="text-base font-extrabold text-utc-blue">Alta de usuarios del sistema</h3>
+                        <p class="text-xs text-gray-500 mt-1">Cree accesos individuales para maestros y administrativos.</p>
+                    </div>
+                    <form id="form-nuevo-usuario" onsubmit="registrarUsuarioSistema(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <input id="nuevo-usuario-nombre" type="text" required placeholder="Nombre completo" class="border rounded-lg px-3 py-2 text-xs">
+                        <input id="nuevo-usuario-usuario" type="text" required placeholder="Nombre de usuario" class="border rounded-lg px-3 py-2 text-xs">
+                        <input id="nuevo-usuario-password" type="password" required minlength="4" placeholder="Contraseña" class="border rounded-lg px-3 py-2 text-xs">
+                        <select id="nuevo-usuario-rol" required class="border rounded-lg px-3 py-2 text-xs bg-white">
+                            <option value="maestro">Maestro</option>
+                            <option value="administrativo">Administrativo</option>
+                        </select>
+                        <button type="submit" class="md:col-span-4 bg-utc-orange text-white py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider">Crear usuario</button>
+                    </form>
+                </div>
+
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-md lg:col-span-1 space-y-4">
                         <h3 class="text-base font-extrabold text-utc-blue border-b pb-2">1. Base de Alumnos (Carga Masiva)</h3>
@@ -482,7 +499,7 @@
                 procesarAnaliticas();
 
                 if (rolActivo === "Administrador") renderizarModuloAdministracion();
-                if (rolActivo === "Administrador" || rolActivo === "Directivo") await cargarCitas();
+                if (rolActivo === "Administrador" || rolActivo === "Administrativo") await cargarCitas();
             } catch (error) {
                 console.error("Error cargando Supabase:", error);
                 alert("No se pudieron cargar los datos principales de Supabase. Revisa internet, tablas y políticas RLS.");
@@ -519,12 +536,21 @@
                 }
 
                 const rolSupabase = String(respuesta.rol || "").toLowerCase().trim();
-                const esAdministrador = rolSupabase === "administrador";
+                const mapaRoles = {
+                    administrador: "Administrador",
+                    maestro: "Maestro",
+                    administrativo: "Administrativo"
+                };
 
-                rolActivo = esAdministrador ? "Administrador" : "Operador";
+                if (!mapaRoles[rolSupabase]) {
+                    alert("El usuario tiene un rol no permitido.");
+                    return;
+                }
+
+                rolActivo = mapaRoles[rolSupabase];
                 usuarioActivo = {
                     nombre: respuesta.nombre || respuesta.usuario || usuarioInput,
-                    cargo: esAdministrador ? "Administrador" : "Operador"
+                    cargo: rolActivo
                 };
 
                 await ingresarAlSistema();
@@ -534,6 +560,41 @@
             } finally {
                 boton.disabled = false;
                 boton.innerText = "INGRESAR AL SISTEMA";
+            }
+        }
+
+        async function registrarUsuarioSistema(e) {
+            e.preventDefault();
+            if (rolActivo !== "Administrador") {
+                alert("Solo el administrador puede crear usuarios.");
+                return;
+            }
+
+            const nombre = document.getElementById('nuevo-usuario-nombre').value.trim();
+            const usuario = document.getElementById('nuevo-usuario-usuario').value.trim();
+            const password = document.getElementById('nuevo-usuario-password').value;
+            const rol = document.getElementById('nuevo-usuario-rol').value;
+
+            try {
+                const { data, error } = await supabaseClient.rpc('registrar_usuario', {
+                    p_usuario: usuario,
+                    p_password: password,
+                    p_nombre: nombre,
+                    p_rol: rol
+                });
+
+                if (error) throw error;
+                const respuesta = Array.isArray(data) ? data[0] : data;
+                if (!respuesta || respuesta.ok !== true) {
+                    alert((respuesta && respuesta.mensaje) || "No se pudo crear el usuario.");
+                    return;
+                }
+
+                document.getElementById('form-nuevo-usuario').reset();
+                alert("Usuario creado correctamente. Ya puede iniciar sesión.");
+            } catch (error) {
+                console.error("Error creando usuario:", error);
+                alert(error.message || "No se pudo crear el usuario en Supabase.");
             }
         }
 
@@ -621,14 +682,16 @@
             document.getElementById('user-tag').innerText = `Sesión: ${usuarioActivo.nombre} (${usuarioActivo.cargo})`;
             document.getElementById('saludo-personalizado').innerText = `¡Hola, ${usuarioActivo.cargo} ${usuarioActivo.nombre}!`;
 
+            const btnDashboard = document.getElementById('btn-dashboard');
             const btnAdmin = document.getElementById('btn-administracion');
             const btnAgenda = document.getElementById('btn-agenda');
             const zonaExportar = document.getElementById('zona-exportar');
             const columnasEliminar = document.querySelectorAll('.th-eliminar-registro');
 
             const esAdmin = rolActivo === "Administrador";
-            const puedeVerAgenda = esAdmin || rolActivo === "Directivo";
+            const puedeVerAgenda = esAdmin || rolActivo === "Administrativo";
 
+            btnDashboard.classList.toggle('hidden', !esAdmin);
             btnAdmin.classList.toggle('hidden', !esAdmin);
             btnAgenda.classList.toggle('hidden', !puedeVerAgenda);
             zonaExportar.classList.toggle('hidden', !esAdmin);
@@ -1055,7 +1118,7 @@
 
         async function guardarCita(e) {
             e.preventDefault();
-            if (!(rolActivo === "Administrador" || rolActivo === "Directivo")) return alert("No tiene permisos para registrar citas.");
+            if (!(rolActivo === "Administrador" || rolActivo === "Administrativo")) return alert("No tiene permisos para registrar citas.");
             if (!document.getElementById('cita-alumno').value) return alert("Seleccione un alumno de la lista de sugerencias.");
 
             const nuevaCita = {
@@ -1207,7 +1270,7 @@
 
         function switchTab(tabId) {
             if (tabId === 'administracion' && rolActivo !== 'Administrador') return;
-            if (tabId === 'agenda' && !(rolActivo === 'Administrador' || rolActivo === 'Directivo')) return;
+            if (tabId === 'agenda' && !(rolActivo === 'Administrador' || rolActivo === 'Administrativo')) return;
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
 
@@ -1222,7 +1285,7 @@
             if (window.innerWidth < 768) toggleMenu();
             if (tabId === 'dashboard' || tabId === 'historial') procesarAnaliticas();
             if (tabId === 'administracion') renderizarModuloAdministracion();
-            if (tabId === 'agenda' && (rolActivo === 'Administrador' || rolActivo === 'Directivo')) cargarCitas();
+            if (tabId === 'agenda' && (rolActivo === 'Administrador' || rolActivo === 'Administrativo')) cargarCitas();
         }
 
         function toggleMenu() {
