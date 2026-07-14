@@ -36,12 +36,16 @@
             
             <form id="form-login-pass" onsubmit="validarPassword(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold uppercase text-utc-blue mb-1">Contraseña del Sistema</label>
+                    <label class="block text-xs font-bold uppercase text-utc-blue mb-1">Usuario</label>
+                    <input type="text" id="login-usuario" required autocomplete="username" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-utc-blue">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-utc-blue mb-1">Contraseña</label>
                     <input type="password" id="login-pass" required autocomplete="current-password" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-utc-blue">
-                    <p class="text-[10px] text-gray-400 mt-2">El tipo de acceso se valida desde Supabase; las contraseñas ya no están escritas en este archivo.</p>
+                    <p class="text-[10px] text-gray-400 mt-2">El usuario y la contraseña se validan de forma segura desde Supabase.</p>
                 </div>
                 <button id="btn-validar-acceso" type="submit" class="w-full bg-utc-orange text-white py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider shadow-md hover:bg-[#b03f22] transition-all">
-                    Verificar Credenciales
+                    Ingresar al Sistema
                 </button>
             </form>
 
@@ -487,47 +491,49 @@
 
         async function validarPassword(e) {
             e.preventDefault();
-            const passInput = document.getElementById('login-pass').value.trim();
+
+            const usuarioInput = document.getElementById('login-usuario').value.trim();
+            const passInput = document.getElementById('login-pass').value;
             const boton = document.getElementById('btn-validar-acceso');
-            if (!passInput) return;
+
+            if (!usuarioInput || !passInput) {
+                alert("Escriba su usuario y contraseña.");
+                return;
+            }
 
             boton.disabled = true;
             boton.innerText = "VALIDANDO...";
 
             try {
-                // Esta función RPC se creará después en Supabase y regresará:
-                // { valido: true, rol: "Administrador" | "Maestro" | "Directivo" }
-                const { data, error } = await supabaseClient.rpc('validar_acceso_utc', {
-             password_input: passInput
-              });
+                const { data, error } = await supabaseClient.rpc('validar_acceso', {
+                    p_usuario: usuarioInput,
+                    p_password: passInput
+                });
+
+                if (error) throw error;
 
                 const respuesta = Array.isArray(data) ? data[0] : data;
-                if (!respuesta || respuesta.valido !== true) {
-                    alert("Contraseña institucional incorrecta.");
+                if (!respuesta) {
+                    alert("Usuario o contraseña incorrectos.");
                     return;
                 }
 
-                tipoAccesoPendiente = respuesta.rol;
+                const rolSupabase = String(respuesta.rol || "").toLowerCase().trim();
+                const esAdministrador = rolSupabase === "administrador";
 
-                if (respuesta.rol === "Administrador") {
-                    rolActivo = "Administrador";
-                    usuarioActivo = { nombre: "Pamela Elizabeth", cargo: "Administrador" };
-                    await ingresarAlSistema();
-                    return;
-                }
+                rolActivo = esAdministrador ? "Administrador" : "Operador";
+                usuarioActivo = {
+                    nombre: respuesta.nombre || respuesta.usuario || usuarioInput,
+                    cargo: esAdministrador ? "Administrador" : "Operador"
+                };
 
-                if (respuesta.rol !== "Maestro" && respuesta.rol !== "Directivo") {
-                    alert("El rol recibido desde Supabase no es válido.");
-                    return;
-                }
-
-                await cargarPersonalParaLogin();
-                prepararIdentificacionPersonal(respuesta.rol);
+                await ingresarAlSistema();
             } catch (error) {
                 console.error("Error validando acceso:", error);
-               alert("No se pudo validar el acceso. Revisa la consola para ver el error de Supabase.");
+                alert(error.message || "No se pudo validar el acceso en Supabase.");
+            } finally {
                 boton.disabled = false;
-                boton.innerText = "VERIFICAR CREDENCIALES";
+                boton.innerText = "INGRESAR AL SISTEMA";
             }
         }
 
@@ -637,6 +643,7 @@
         function cerrarSesion() {
             rolActivo = null;
             document.getElementById('form-incidencia').reset();
+            document.getElementById('login-usuario').value = "";
             document.getElementById('login-pass').value = "";
             document.getElementById('login-cargo-tipo').value = "";
             document.getElementById('login-cargo-nombre').innerHTML = '<option value="">-- Seleccione su nombre --</option>';
