@@ -19,6 +19,11 @@
         .text-utc-orange { color: #c94a29; }
         .border-utc-orange { border-color: #c94a29; }
         .bg-utc-light { background-color: #f8fafc; }
+        .modal-overlay { overflow-y: auto; align-items: flex-start; }
+        .modal-panel { width: 100%; max-height: calc(100dvh - 2rem); overflow-y: auto; margin: auto; }
+        @media (min-width: 640px) {
+            .modal-overlay { align-items: center; }
+        }
     </style>
 </head>
 <body class="bg-utc-light text-gray-800 font-sans min-h-screen flex flex-col md:flex-row">
@@ -74,6 +79,9 @@
                 </button>
                 <button onclick="switchTab('historial')" id="btn-historial" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all">
                     <span>Historial Alumnos</span>
+                </button>
+                <button onclick="switchTab('seguimiento')" id="btn-seguimiento" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all hidden">
+                    <span>Seguimiento de Incidencias</span>
                 </button>
                 <button onclick="switchTab('agenda')" id="btn-agenda" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all hidden">
                     <span>Agenda de Padres</span>
@@ -258,6 +266,77 @@
                         </thead>
                         <tbody id="tabla-cuerpo" class="divide-y divide-gray-100 text-xs md:text-sm text-gray-700 bg-white"></tbody>
                     </table>
+                </div>
+            </section>
+
+
+            <section id="tab-seguimiento" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-utc-blue">Seguimiento de Incidencias</h2>
+                        <p class="text-xs md:text-sm text-gray-500">Consulta los casos registrados, documenta las acciones realizadas y marca cada caso como cerrado o pendiente.</p>
+                    </div>
+                    <button onclick="cargarSeguimientos()" class="bg-utc-blue text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider">Actualizar</button>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-utc-blue mb-1">Buscar alumno o matrícula</label>
+                            <input id="filtro-seguimiento-busqueda" oninput="renderizarIncidenciasSeguimiento()" type="text" placeholder="Nombre o matrícula..." class="w-full border rounded-lg px-3 py-2.5 text-xs bg-gray-50">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-utc-blue mb-1">Estado del caso</label>
+                            <select id="filtro-seguimiento-estado" onchange="renderizarIncidenciasSeguimiento()" class="w-full border rounded-lg px-3 py-2.5 text-xs bg-white">
+                                <option value="todos">Todos</option>
+                                <option value="Pendiente">Pendientes</option>
+                                <option value="Cerrado">Cerrados</option>
+                                <option value="Sin seguimiento">Sin seguimiento</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
+                    <div class="p-4 border-b"><h3 class="font-extrabold text-utc-blue">Incidencias registradas</h3></div>
+                    <div class="overflow-x-auto max-h-[430px] overflow-y-auto">
+                        <table class="min-w-full divide-y divide-gray-200 text-xs">
+                            <thead class="bg-gray-50 sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-3 py-2 text-left">Fecha</th>
+                                    <th class="px-3 py-2 text-left">Matrícula</th>
+                                    <th class="px-3 py-2 text-left">Alumno</th>
+                                    <th class="px-3 py-2 text-left">Antecedente</th>
+                                    <th class="px-3 py-2 text-left">Último estado</th>
+                                    <th class="px-3 py-2 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-incidencias-seguimiento" class="divide-y bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
+                    <div class="p-4 border-b">
+                        <h3 class="font-extrabold text-utc-blue">Registro de seguimientos realizados</h3>
+                        <p class="text-[11px] text-gray-500 mt-1">Fecha de seguimiento, alumno, antecedente, resolución, comentario y estado final.</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 text-xs">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left">Fecha seguimiento</th>
+                                    <th class="px-3 py-2 text-left">Matrícula</th>
+                                    <th class="px-3 py-2 text-left">Alumno</th>
+                                    <th class="px-3 py-2 text-left">Antecedente</th>
+                                    <th class="px-3 py-2 text-left">Cómo se resolvió</th>
+                                    <th class="px-3 py-2 text-left">Comentario</th>
+                                    <th class="px-3 py-2 text-left">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-seguimientos-cuerpo" class="divide-y bg-white"></tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
@@ -479,8 +558,8 @@
         </main>
     </div>
 
-    <div id="modal-hecho-reportado" class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/60 p-4" onclick="cerrarHechoReportado(event)">
-        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+    <div id="modal-hecho-reportado" class="modal-overlay fixed inset-0 z-[200] hidden justify-center bg-black/60 p-2 sm:p-4" onclick="cerrarHechoReportado(event)">
+        <div class="modal-panel bg-white max-w-2xl rounded-2xl shadow-2xl overflow-y-auto" onclick="event.stopPropagation()">
             <div class="bg-utc-blue text-white px-5 py-4 flex items-center justify-between gap-4">
                 <div>
                     <h3 class="font-extrabold text-lg">Hecho reportado</h3>
@@ -496,10 +575,73 @@
                 </div>
                 <div>
                     <p class="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2">Descripción completa</p>
-                    <div id="modal-hecho-descripcion" class="min-h-40 max-h-[55vh] overflow-y-auto whitespace-pre-wrap break-words bg-gray-50 border rounded-xl p-4 text-sm leading-relaxed text-gray-700"></div>
+                    <div id="modal-hecho-descripcion" class="min-h-28 max-h-[38dvh] overflow-y-auto whitespace-pre-wrap break-words bg-gray-50 border rounded-xl p-4 text-sm leading-relaxed text-gray-700"></div>
                 </div>
                 <button type="button" onclick="cerrarHechoReportado()" class="w-full bg-utc-orange text-white py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider">Cerrar</button>
             </div>
+        </div>
+    </div>
+
+    <div id="modal-seguimiento" class="modal-overlay fixed inset-0 z-[210] hidden justify-center bg-black/60 p-2 sm:p-4" onclick="cerrarModalSeguimiento(event)">
+        <div class="modal-panel bg-white max-w-3xl rounded-2xl shadow-2xl" onclick="event.stopPropagation()">
+            <div class="sticky top-0 z-10 bg-utc-blue text-white px-4 sm:px-5 py-4 flex items-start justify-between gap-3 rounded-t-2xl">
+                <div>
+                    <h3 class="font-extrabold text-lg">Registrar seguimiento</h3>
+                    <p id="seguimiento-incidencia-resumen" class="text-xs text-white/75 mt-1"></p>
+                </div>
+                <button type="button" onclick="cerrarModalSeguimiento()" class="shrink-0 w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-xl font-bold">×</button>
+            </div>
+            <form id="form-seguimiento" onsubmit="guardarSeguimiento(event)" class="p-4 sm:p-5 space-y-4">
+                <input id="seguimiento-incidencia-id" type="hidden">
+                <div class="bg-gray-50 border rounded-xl p-3">
+                    <p class="text-[10px] uppercase font-bold text-gray-400 mb-1">Antecedente del caso</p>
+                    <div id="seguimiento-antecedente" class="text-sm whitespace-pre-wrap break-words text-gray-700 max-h-36 overflow-y-auto"></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold text-utc-blue mb-1">¿Se dio seguimiento?</label>
+                        <select id="seguimiento-realizado" required class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white">
+                            <option value="Se le dio seguimiento">Se le dio seguimiento</option>
+                            <option value="No se dio seguimiento">No se dio seguimiento</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-bold text-utc-blue mb-1">Fecha del seguimiento</label>
+                        <input id="seguimiento-fecha" type="date" required class="w-full border rounded-lg px-3 py-2.5 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-utc-blue mb-1">Comentario de lo que se hizo y qué pasó</label>
+                    <textarea id="seguimiento-comentario" rows="4" required placeholder="Ej. Se habló con el padre de familia, indicó que..." class="w-full border rounded-lg px-3 py-2.5 text-sm resize-y"></textarea>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-utc-blue mb-1">Medida o forma de resolución</label>
+                    <select id="seguimiento-resolucion" required onchange="mostrarOtraResolucion()" class="w-full border rounded-lg px-3 py-2.5 text-sm bg-white">
+                        <option value="">-- Seleccione --</option>
+                        <option value="Suspensión">Suspensión</option>
+                        <option value="Carta condicionante">Carta condicionante</option>
+                        <option value="Llamada de atención">Llamada de atención</option>
+                        <option value="Investigación">Se inició una investigación</option>
+                        <option value="Se mandó llamar al padre, madre o tutor">Se mandó llamar al padre, madre o tutor</option>
+                        <option value="Acuerdo o compromiso">Acuerdo o compromiso</option>
+                        <option value="Canalización">Canalización</option>
+                        <option value="Sin medida disciplinaria">Sin medida disciplinaria</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                    <input id="seguimiento-resolucion-otra" type="text" placeholder="Especifique otra medida..." class="hidden mt-2 w-full border rounded-lg px-3 py-2.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-bold text-utc-blue mb-1">Estado del caso</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="border rounded-lg p-3 flex items-center gap-2 cursor-pointer"><input type="radio" name="estado-caso" value="Cerrado" required> <span class="text-sm font-bold">Cerrado</span></label>
+                        <label class="border rounded-lg p-3 flex items-center gap-2 cursor-pointer"><input type="radio" name="estado-caso" value="Pendiente" required checked> <span class="text-sm font-bold">Pendiente</span></label>
+                    </div>
+                </div>
+                <div class="flex flex-col-reverse sm:flex-row gap-2 pt-1">
+                    <button type="button" onclick="cerrarModalSeguimiento()" class="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-lg text-xs font-bold uppercase">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-utc-orange text-white py-2.5 rounded-lg text-xs font-bold uppercase">Guardar seguimiento</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -521,6 +663,7 @@
         let baseAlumnos = [];
         let usuariosSistema = [];
         let citasPadres = [];
+        let seguimientosIncidencias = [];
         let chartFlujo, chartTipo;
 
         function obtenerAutorReporte(i) {
@@ -554,7 +697,10 @@
                     renderizarModuloAdministracion();
                     await cargarUsuariosSistema();
                 }
-                if (rolActivo === "Administrador" || rolActivo === "Administrativo") await cargarCitas();
+                if (rolActivo === "Administrador" || rolActivo === "Administrativo") {
+                    await cargarCitas();
+                    await cargarSeguimientos();
+                }
             } catch (error) {
                 console.error("Error cargando Supabase:", error);
                 alert("No se pudieron cargar los datos principales de Supabase. Revisa internet, tablas y políticas RLS.");
@@ -604,6 +750,8 @@
 
                 rolActivo = mapaRoles[rolSupabase];
                 usuarioActivo = {
+                    id: respuesta.id || null,
+                    usuario: respuesta.usuario || usuarioInput,
                     nombre: respuesta.nombre || respuesta.usuario || usuarioInput,
                     cargo: rolActivo
                 };
@@ -666,6 +814,7 @@
             const btnDashboard = document.getElementById('btn-dashboard');
             const btnAdmin = document.getElementById('btn-administracion');
             const btnAgenda = document.getElementById('btn-agenda');
+            const btnSeguimiento = document.getElementById('btn-seguimiento');
             const zonaExportar = document.getElementById('zona-exportar');
             const columnasEliminar = document.querySelectorAll('.th-eliminar-registro');
 
@@ -675,6 +824,7 @@
             btnDashboard.classList.toggle('hidden', !esAdmin);
             btnAdmin.classList.toggle('hidden', !esAdmin);
             btnAgenda.classList.toggle('hidden', !puedeVerAgenda);
+            btnSeguimiento.classList.toggle('hidden', !puedeVerAgenda);
             zonaExportar.classList.toggle('hidden', !esAdmin);
             columnasEliminar.forEach(c => c.classList.toggle('hidden', !esAdmin));
 
@@ -1054,7 +1204,10 @@
         }
 
         document.addEventListener('keydown', event => {
-            if (event.key === 'Escape') cerrarHechoReportado();
+            if (event.key === 'Escape') {
+                cerrarHechoReportado();
+                cerrarModalSeguimiento();
+            }
         });
 
         function procesarHistorial() {
@@ -1065,6 +1218,12 @@
             const ahora = Date.now();
 
             let filtradas = [...incidencias];
+
+            // Los maestros solo pueden consultar las incidencias que ellos mismos registraron.
+            if (rolActivo === 'Maestro') {
+                const autorSesion = `${usuarioActivo.cargo}: ${usuarioActivo.nombre}`.toLowerCase().trim();
+                filtradas = filtradas.filter(i => obtenerAutorReporte(i).toLowerCase().trim() === autorSesion);
+            }
 
             if (busqueda !== '') {
                 filtradas = filtradas.filter(i =>
@@ -1139,6 +1298,174 @@
             }
         }
 
+        async function cargarSeguimientos() {
+            if (!(rolActivo === 'Administrador' || rolActivo === 'Administrativo')) return;
+            const { data, error } = await supabaseClient
+                .from('seguimientos_incidencias')
+                .select('*')
+                .order('fecha_seguimiento', { ascending: false })
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error cargando seguimientos:', error);
+                seguimientosIncidencias = [];
+                renderizarIncidenciasSeguimiento();
+                renderizarTablaSeguimientos();
+                return;
+            }
+
+            seguimientosIncidencias = data || [];
+            renderizarIncidenciasSeguimiento();
+            renderizarTablaSeguimientos();
+        }
+
+        function obtenerUltimoSeguimiento(incidenciaId) {
+            return seguimientosIncidencias
+                .filter(s => Number(s.incidencia_id) === Number(incidenciaId))
+                .sort((a, b) => String(b.created_at || b.fecha_seguimiento || '').localeCompare(String(a.created_at || a.fecha_seguimiento || '')))[0] || null;
+        }
+
+        function renderizarIncidenciasSeguimiento() {
+            const cuerpo = document.getElementById('tabla-incidencias-seguimiento');
+            if (!cuerpo) return;
+            const busqueda = (document.getElementById('filtro-seguimiento-busqueda')?.value || '').toLowerCase().trim();
+            const estado = document.getElementById('filtro-seguimiento-estado')?.value || 'todos';
+
+            let lista = [...incidencias];
+            if (busqueda) {
+                lista = lista.filter(i =>
+                    String(i.nombre || '').toLowerCase().includes(busqueda) ||
+                    String(i.matricula || '').toLowerCase().includes(busqueda)
+                );
+            }
+            if (estado !== 'todos') {
+                lista = lista.filter(i => {
+                    const ultimo = obtenerUltimoSeguimiento(i.id);
+                    if (estado === 'Sin seguimiento') return !ultimo;
+                    return ultimo && ultimo.estado_caso === estado;
+                });
+            }
+            lista.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+            cuerpo.innerHTML = '';
+
+            if (lista.length === 0) {
+                cuerpo.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400 italic">No hay incidencias para mostrar.</td></tr>';
+                return;
+            }
+
+            lista.forEach(i => {
+                const ultimo = obtenerUltimoSeguimiento(i.id);
+                const estadoTexto = ultimo ? ultimo.estado_caso : 'Sin seguimiento';
+                const estadoClase = estadoTexto === 'Cerrado' ? 'bg-emerald-100 text-emerald-700' : estadoTexto === 'Pendiente' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-3 py-2 whitespace-nowrap">${escaparHTML(i.fecha || '')}</td>
+                    <td class="px-3 py-2 font-bold text-utc-blue">${escaparHTML(i.matricula || '')}</td>
+                    <td class="px-3 py-2"><strong>${escaparHTML(i.nombre || '')}</strong><br><span class="text-gray-400">${escaparHTML(i.grupo || '')}</span></td>
+                    <td class="px-3 py-2 max-w-xs"><div class="line-clamp-2">${escaparHTML(i.tipo || '')}: ${escaparHTML(i.descripcion || '')}</div></td>
+                    <td class="px-3 py-2"><span class="inline-block px-2 py-1 rounded-full font-bold ${estadoClase}">${estadoTexto}</span></td>
+                    <td class="px-3 py-2 text-center"><button onclick="abrirModalSeguimiento(${i.id})" class="bg-utc-orange text-white px-3 py-2 rounded-lg font-bold whitespace-nowrap">Dar seguimiento</button></td>`;
+                cuerpo.appendChild(tr);
+            });
+        }
+
+        function renderizarTablaSeguimientos() {
+            const cuerpo = document.getElementById('tabla-seguimientos-cuerpo');
+            if (!cuerpo) return;
+            cuerpo.innerHTML = '';
+            if (seguimientosIncidencias.length === 0) {
+                cuerpo.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400 italic">Todavía no hay seguimientos registrados.</td></tr>';
+                return;
+            }
+            seguimientosIncidencias.forEach(s => {
+                const estadoClase = s.estado_caso === 'Cerrado' ? 'text-emerald-700' : 'text-amber-700';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-3 py-2 whitespace-nowrap">${escaparHTML(s.fecha_seguimiento || '')}</td>
+                    <td class="px-3 py-2 font-bold text-utc-blue">${escaparHTML(s.matricula || '')}</td>
+                    <td class="px-3 py-2">${escaparHTML(s.alumno || '')}</td>
+                    <td class="px-3 py-2 min-w-56"><div class="max-h-24 overflow-y-auto whitespace-pre-wrap">${escaparHTML(s.antecedente || '')}</div></td>
+                    <td class="px-3 py-2">${escaparHTML(s.resolucion || '')}</td>
+                    <td class="px-3 py-2 min-w-56"><div class="max-h-24 overflow-y-auto whitespace-pre-wrap">${escaparHTML(s.comentario || '')}</div></td>
+                    <td class="px-3 py-2 font-bold ${estadoClase}">${escaparHTML(s.estado_caso || '')}</td>`;
+                cuerpo.appendChild(tr);
+            });
+        }
+
+        function abrirModalSeguimiento(id) {
+            if (!(rolActivo === 'Administrador' || rolActivo === 'Administrativo')) return alert('No tiene permisos para dar seguimiento.');
+            const item = incidencias.find(i => Number(i.id) === Number(id));
+            if (!item) return alert('No se encontró la incidencia.');
+
+            document.getElementById('form-seguimiento').reset();
+            document.getElementById('seguimiento-incidencia-id').value = item.id;
+            document.getElementById('seguimiento-incidencia-resumen').textContent = `${item.nombre || ''} · ${item.matricula || ''} · ${item.grupo || ''}`;
+            document.getElementById('seguimiento-antecedente').textContent = `${item.tipo || item.eje || 'Incidencia'}
+${item.descripcion || 'Sin descripción'}`;
+            document.getElementById('seguimiento-fecha').value = new Date().toISOString().slice(0, 10);
+            document.querySelector('input[name="estado-caso"][value="Pendiente"]').checked = true;
+            mostrarOtraResolucion();
+
+            const modal = document.getElementById('modal-seguimiento');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function cerrarModalSeguimiento(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const modal = document.getElementById('modal-seguimiento');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            if (document.getElementById('modal-hecho-reportado')?.classList.contains('hidden')) document.body.style.overflow = '';
+        }
+
+        function mostrarOtraResolucion() {
+            const select = document.getElementById('seguimiento-resolucion');
+            const input = document.getElementById('seguimiento-resolucion-otra');
+            if (!select || !input) return;
+            const mostrar = select.value === 'Otro';
+            input.classList.toggle('hidden', !mostrar);
+            input.required = mostrar;
+            if (!mostrar) input.value = '';
+        }
+
+        async function guardarSeguimiento(e) {
+            e.preventDefault();
+            if (!(rolActivo === 'Administrador' || rolActivo === 'Administrativo')) return alert('No tiene permisos para guardar seguimientos.');
+            const incidenciaId = Number(document.getElementById('seguimiento-incidencia-id').value);
+            const item = incidencias.find(i => Number(i.id) === incidenciaId);
+            if (!item) return alert('No se encontró la incidencia relacionada.');
+
+            let resolucion = document.getElementById('seguimiento-resolucion').value;
+            if (resolucion === 'Otro') resolucion = document.getElementById('seguimiento-resolucion-otra').value.trim();
+            const estadoCaso = document.querySelector('input[name="estado-caso"]:checked')?.value;
+
+            const registro = {
+                incidencia_id: item.id,
+                fecha_seguimiento: document.getElementById('seguimiento-fecha').value,
+                matricula: item.matricula || '',
+                alumno: item.nombre || '',
+                grupo: item.grupo || '',
+                antecedente: `${item.tipo || item.eje || 'Incidencia'}: ${item.descripcion || ''}`,
+                seguimiento: document.getElementById('seguimiento-realizado').value,
+                comentario: document.getElementById('seguimiento-comentario').value.trim(),
+                resolucion,
+                estado_caso: estadoCaso,
+                registrado_por: `${usuarioActivo.cargo}: ${usuarioActivo.nombre}`
+            };
+
+            const { error } = await supabaseClient.from('seguimientos_incidencias').insert([registro]);
+            if (error) {
+                console.error(error);
+                return alert(error.message || 'No se pudo guardar el seguimiento.');
+            }
+            cerrarModalSeguimiento();
+            await cargarSeguimientos();
+            alert('Seguimiento guardado correctamente.');
+        }
+
         async function guardarIncidencia(e) {
             e.preventDefault();
             const cat = document.getElementById('categoria-seleccionada').value;
@@ -1174,7 +1501,7 @@
 
             alert('Incidencia registrada en Supabase.');
             await cargarDatosSupabase();
-            switchTab('dashboard');
+            switchTab(rolActivo === 'Administrador' ? 'dashboard' : 'historial');
         }
 
         function selectCategoria(cat) {
@@ -1397,6 +1724,7 @@
         function switchTab(tabId) {
             if (tabId === 'administracion' && rolActivo !== 'Administrador') return;
             if (tabId === 'agenda' && !(rolActivo === 'Administrador' || rolActivo === 'Administrativo')) return;
+            if (tabId === 'seguimiento' && !(rolActivo === 'Administrador' || rolActivo === 'Administrativo')) return;
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
 
@@ -1413,6 +1741,7 @@
             if (tabId === 'historial') procesarHistorial();
             if (tabId === 'administracion') renderizarModuloAdministracion();
             if (tabId === 'agenda' && (rolActivo === 'Administrador' || rolActivo === 'Administrativo')) cargarCitas();
+            if (tabId === 'seguimiento' && (rolActivo === 'Administrador' || rolActivo === 'Administrativo')) cargarSeguimientos();
         }
 
         function toggleMenu() {
