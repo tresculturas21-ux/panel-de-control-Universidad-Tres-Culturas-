@@ -83,6 +83,9 @@
                 <button onclick="switchTab('seguimiento')" id="btn-seguimiento" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all hidden">
                     <span>Seguimiento de Incidencias</span>
                 </button>
+                <button onclick="switchTab('mis-seguimientos')" id="btn-mis-seguimientos" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all hidden">
+                    <span>Estado de mis Incidencias</span>
+                </button>
                 <button onclick="switchTab('agenda')" id="btn-agenda" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all hidden">
                     <span>Agenda de Padres</span>
                 </button>
@@ -317,9 +320,15 @@
                 </div>
 
                 <div class="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
-                    <div class="p-4 border-b">
-                        <h3 class="font-extrabold text-utc-blue">Registro de seguimientos realizados</h3>
-                        <p class="text-[11px] text-gray-500 mt-1">Fecha de seguimiento, alumno, antecedente, resolución, comentario y estado final.</p>
+                    <div class="p-4 border-b space-y-3">
+                        <div>
+                            <h3 class="font-extrabold text-utc-blue">Registro de seguimientos realizados</h3>
+                            <p class="text-[11px] text-gray-500 mt-1">Fecha, alumno, antecedente, resolución, comentario, usuario responsable y estado final.</p>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <input id="filtro-registro-seguimiento" oninput="renderizarTablaSeguimientos()" type="text" placeholder="Filtrar por matrícula o nombre..." class="sm:col-span-2 border rounded-lg px-3 py-2.5 text-xs bg-gray-50">
+                            <button type="button" onclick="limpiarFiltroRegistroSeguimiento()" class="bg-gray-200 text-gray-700 rounded-lg px-3 py-2.5 text-xs font-bold uppercase">Limpiar filtro</button>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-xs">
@@ -331,6 +340,7 @@
                                     <th class="px-3 py-2 text-left">Antecedente</th>
                                     <th class="px-3 py-2 text-left">Cómo se resolvió</th>
                                     <th class="px-3 py-2 text-left">Comentario</th>
+                                    <th class="px-3 py-2 text-left">Seguimiento realizado por</th>
                                     <th class="px-3 py-2 text-left">Estado</th>
                                 </tr>
                             </thead>
@@ -340,6 +350,37 @@
                 </div>
             </section>
 
+
+            <section id="tab-mis-seguimientos" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl md:text-2xl font-bold text-utc-blue">Estado de mis Incidencias</h2>
+                        <p class="text-xs md:text-sm text-gray-500">Aquí se muestran únicamente las incidencias que usted registró y que ya recibieron seguimiento.</p>
+                    </div>
+                    <button onclick="cargarSeguimientos()" class="bg-utc-blue text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase">Actualizar</button>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <input id="filtro-mis-seguimientos" oninput="renderizarMisSeguimientos()" type="text" placeholder="Buscar por matrícula o nombre del alumno..." class="w-full border rounded-lg px-3 py-2.5 text-xs bg-gray-50">
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 text-xs">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left">Fecha</th>
+                                    <th class="px-3 py-2 text-left">Matrícula</th>
+                                    <th class="px-3 py-2 text-left">Alumno</th>
+                                    <th class="px-3 py-2 text-left">Antecedente</th>
+                                    <th class="px-3 py-2 text-left">Resolución</th>
+                                    <th class="px-3 py-2 text-left">Comentario</th>
+                                    <th class="px-3 py-2 text-left">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-mis-seguimientos" class="divide-y bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
 
             <section id="tab-agenda" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
                 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -582,6 +623,26 @@
         </div>
     </div>
 
+    <div id="modal-detalle-seguimiento" class="modal-overlay fixed inset-0 z-[215] hidden justify-center bg-black/60 p-2 sm:p-4" onclick="cerrarDetalleSeguimiento(event)">
+        <div class="modal-panel bg-white max-w-3xl rounded-2xl shadow-2xl overflow-y-auto" onclick="event.stopPropagation()">
+            <div class="sticky top-0 z-10 bg-utc-blue text-white px-4 sm:px-5 py-4 flex items-center justify-between gap-3">
+                <div><h3 class="font-extrabold text-lg">Detalle del seguimiento</h3><p id="detalle-seguimiento-alumno" class="text-xs text-white/70 mt-1"></p></div>
+                <button type="button" onclick="cerrarDetalleSeguimiento()" class="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-xl font-bold">×</button>
+            </div>
+            <div class="p-4 sm:p-5 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div class="bg-gray-50 border rounded-lg p-3"><span class="block text-gray-400 uppercase font-bold">Fecha</span><strong id="detalle-seguimiento-fecha" class="text-utc-blue"></strong></div>
+                    <div class="bg-gray-50 border rounded-lg p-3"><span class="block text-gray-400 uppercase font-bold">Resolución</span><strong id="detalle-seguimiento-resolucion" class="text-utc-blue"></strong></div>
+                    <div class="bg-gray-50 border rounded-lg p-3"><span class="block text-gray-400 uppercase font-bold">Estado</span><strong id="detalle-seguimiento-estado" class="text-utc-blue"></strong></div>
+                </div>
+                <div><p class="text-[10px] uppercase font-bold text-gray-400 mb-1">Antecedente</p><div id="detalle-seguimiento-antecedente" class="max-h-[25dvh] overflow-y-auto whitespace-pre-wrap break-words bg-gray-50 border rounded-xl p-4 text-sm"></div></div>
+                <div><p class="text-[10px] uppercase font-bold text-gray-400 mb-1">Comentario completo</p><div id="detalle-seguimiento-comentario" class="max-h-[35dvh] overflow-y-auto whitespace-pre-wrap break-words bg-gray-50 border rounded-xl p-4 text-sm leading-relaxed"></div></div>
+                <div class="text-xs"><span class="font-bold text-gray-500">Seguimiento realizado por:</span> <span id="detalle-seguimiento-usuario"></span></div>
+                <button type="button" onclick="cerrarDetalleSeguimiento()" class="w-full bg-utc-orange text-white py-2.5 rounded-lg text-xs font-bold uppercase">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-seguimiento" class="modal-overlay fixed inset-0 z-[210] hidden justify-center bg-black/60 p-2 sm:p-4" onclick="cerrarModalSeguimiento(event)">
         <div class="modal-panel bg-white max-w-3xl rounded-2xl shadow-2xl" onclick="event.stopPropagation()">
             <div class="sticky top-0 z-10 bg-utc-blue text-white px-4 sm:px-5 py-4 flex items-start justify-between gap-3 rounded-t-2xl">
@@ -699,6 +760,8 @@
                 }
                 if (rolActivo === "Administrador" || rolActivo === "Administrativo") {
                     await cargarCitas();
+                }
+                if (rolActivo === "Administrador" || rolActivo === "Administrativo" || rolActivo === "Maestro") {
                     await cargarSeguimientos();
                 }
             } catch (error) {
@@ -815,6 +878,7 @@
             const btnAdmin = document.getElementById('btn-administracion');
             const btnAgenda = document.getElementById('btn-agenda');
             const btnSeguimiento = document.getElementById('btn-seguimiento');
+            const btnMisSeguimientos = document.getElementById('btn-mis-seguimientos');
             const zonaExportar = document.getElementById('zona-exportar');
             const columnasEliminar = document.querySelectorAll('.th-eliminar-registro');
 
@@ -825,6 +889,7 @@
             btnAdmin.classList.toggle('hidden', !esAdmin);
             btnAgenda.classList.toggle('hidden', !puedeVerAgenda);
             btnSeguimiento.classList.toggle('hidden', !puedeVerAgenda);
+            btnMisSeguimientos.classList.toggle('hidden', rolActivo !== 'Maestro');
             zonaExportar.classList.toggle('hidden', !esAdmin);
             columnasEliminar.forEach(c => c.classList.toggle('hidden', !esAdmin));
 
@@ -1299,7 +1364,7 @@
         }
 
         async function cargarSeguimientos() {
-            if (!(rolActivo === 'Administrador' || rolActivo === 'Administrativo')) return;
+            if (!(rolActivo === 'Administrador' || rolActivo === 'Administrativo' || rolActivo === 'Maestro')) return;
             const { data, error } = await supabaseClient
                 .from('seguimientos_incidencias')
                 .select('*')
@@ -1311,12 +1376,14 @@
                 seguimientosIncidencias = [];
                 renderizarIncidenciasSeguimiento();
                 renderizarTablaSeguimientos();
+                renderizarMisSeguimientos();
                 return;
             }
 
             seguimientosIncidencias = data || [];
             renderizarIncidenciasSeguimiento();
             renderizarTablaSeguimientos();
+            renderizarMisSeguimientos();
         }
 
         function obtenerUltimoSeguimiento(incidenciaId) {
@@ -1372,24 +1439,90 @@
         function renderizarTablaSeguimientos() {
             const cuerpo = document.getElementById('tabla-seguimientos-cuerpo');
             if (!cuerpo) return;
+            const filtro = (document.getElementById('filtro-registro-seguimiento')?.value || '').toLowerCase().trim();
+            const lista = seguimientosIncidencias.filter(s => !filtro ||
+                String(s.matricula || '').toLowerCase().includes(filtro) ||
+                String(s.alumno || '').toLowerCase().includes(filtro)
+            );
             cuerpo.innerHTML = '';
-            if (seguimientosIncidencias.length === 0) {
-                cuerpo.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400 italic">Todavía no hay seguimientos registrados.</td></tr>';
+            if (lista.length === 0) {
+                cuerpo.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-400 italic">No hay seguimientos que coincidan con el filtro.</td></tr>';
                 return;
             }
-            seguimientosIncidencias.forEach(s => {
+            lista.forEach(s => {
                 const estadoClase = s.estado_caso === 'Cerrado' ? 'text-emerald-700' : 'text-amber-700';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="px-3 py-2 whitespace-nowrap">${escaparHTML(s.fecha_seguimiento || '')}</td>
                     <td class="px-3 py-2 font-bold text-utc-blue">${escaparHTML(s.matricula || '')}</td>
                     <td class="px-3 py-2">${escaparHTML(s.alumno || '')}</td>
-                    <td class="px-3 py-2 min-w-56"><div class="max-h-24 overflow-y-auto whitespace-pre-wrap">${escaparHTML(s.antecedente || '')}</div></td>
+                    <td class="px-3 py-2 min-w-56"><div class="line-clamp-3">${escaparHTML(s.antecedente || '')}</div></td>
                     <td class="px-3 py-2">${escaparHTML(s.resolucion || '')}</td>
-                    <td class="px-3 py-2 min-w-56"><div class="max-h-24 overflow-y-auto whitespace-pre-wrap">${escaparHTML(s.comentario || '')}</div></td>
+                    <td class="px-3 py-2 min-w-56"><div class="line-clamp-3">${escaparHTML(s.comentario || '')}</div><button type="button" onclick="abrirDetalleSeguimiento(${s.id})" class="mt-1 text-utc-orange font-bold hover:underline">Ver completo</button></td>
+                    <td class="px-3 py-2 font-semibold">${escaparHTML(s.registrado_por || 'Sin usuario')}</td>
                     <td class="px-3 py-2 font-bold ${estadoClase}">${escaparHTML(s.estado_caso || '')}</td>`;
                 cuerpo.appendChild(tr);
             });
+        }
+
+        function limpiarFiltroRegistroSeguimiento() {
+            const input = document.getElementById('filtro-registro-seguimiento');
+            if (input) input.value = '';
+            renderizarTablaSeguimientos();
+        }
+
+        function incidenciaPerteneceAlMaestro(incidencia) {
+            const autor = String(obtenerAutorReporte(incidencia) || '').toLowerCase().trim();
+            const nombre = String(usuarioActivo.nombre || '').toLowerCase().trim();
+            return autor === `maestro: ${nombre}` || (autor.includes('maestro') && autor.includes(nombre));
+        }
+
+        function renderizarMisSeguimientos() {
+            const cuerpo = document.getElementById('tabla-mis-seguimientos');
+            if (!cuerpo) return;
+            const filtro = (document.getElementById('filtro-mis-seguimientos')?.value || '').toLowerCase().trim();
+            const idsPropios = new Set(incidencias.filter(incidenciaPerteneceAlMaestro).map(i => Number(i.id)));
+            const lista = seguimientosIncidencias.filter(s => idsPropios.has(Number(s.incidencia_id)) && (!filtro ||
+                String(s.matricula || '').toLowerCase().includes(filtro) || String(s.alumno || '').toLowerCase().includes(filtro)));
+            cuerpo.innerHTML = '';
+            if (!lista.length) {
+                cuerpo.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400 italic">Aún no hay seguimientos para las incidencias que usted registró.</td></tr>';
+                return;
+            }
+            lista.forEach(s => {
+                const estadoClase = s.estado_caso === 'Cerrado' ? 'text-emerald-700' : 'text-amber-700';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-3 py-2 whitespace-nowrap">${escaparHTML(s.fecha_seguimiento || '')}</td>
+                    <td class="px-3 py-2 font-bold text-utc-blue">${escaparHTML(s.matricula || '')}</td>
+                    <td class="px-3 py-2">${escaparHTML(s.alumno || '')}</td>
+                    <td class="px-3 py-2 min-w-56"><div class="line-clamp-3">${escaparHTML(s.antecedente || '')}</div></td>
+                    <td class="px-3 py-2">${escaparHTML(s.resolucion || '')}</td>
+                    <td class="px-3 py-2 min-w-56"><div class="line-clamp-3">${escaparHTML(s.comentario || '')}</div><button type="button" onclick="abrirDetalleSeguimiento(${s.id})" class="mt-1 text-utc-orange font-bold hover:underline">Ver completo</button></td>
+                    <td class="px-3 py-2 font-bold ${estadoClase}">${escaparHTML(s.estado_caso || '')}</td>`;
+                cuerpo.appendChild(tr);
+            });
+        }
+
+        function abrirDetalleSeguimiento(id) {
+            const s = seguimientosIncidencias.find(x => Number(x.id) === Number(id));
+            if (!s) return alert('No se encontró el seguimiento.');
+            document.getElementById('detalle-seguimiento-alumno').textContent = `${s.alumno || ''} · ${s.matricula || ''} · ${s.grupo || ''}`;
+            document.getElementById('detalle-seguimiento-fecha').textContent = s.fecha_seguimiento || '';
+            document.getElementById('detalle-seguimiento-resolucion').textContent = s.resolucion || '';
+            document.getElementById('detalle-seguimiento-estado').textContent = s.estado_caso || '';
+            document.getElementById('detalle-seguimiento-antecedente').textContent = s.antecedente || '';
+            document.getElementById('detalle-seguimiento-comentario').textContent = s.comentario || '';
+            document.getElementById('detalle-seguimiento-usuario').textContent = s.registrado_por || 'Sin usuario registrado';
+            const modal = document.getElementById('modal-detalle-seguimiento');
+            modal.classList.remove('hidden'); modal.classList.add('flex'); document.body.style.overflow = 'hidden';
+        }
+
+        function cerrarDetalleSeguimiento(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const modal = document.getElementById('modal-detalle-seguimiento');
+            if (!modal) return;
+            modal.classList.add('hidden'); modal.classList.remove('flex'); document.body.style.overflow = '';
         }
 
         function abrirModalSeguimiento(id) {
@@ -1725,6 +1858,7 @@ ${item.descripcion || 'Sin descripción'}`;
             if (tabId === 'administracion' && rolActivo !== 'Administrador') return;
             if (tabId === 'agenda' && !(rolActivo === 'Administrador' || rolActivo === 'Administrativo')) return;
             if (tabId === 'seguimiento' && !(rolActivo === 'Administrador' || rolActivo === 'Administrativo')) return;
+            if (tabId === 'mis-seguimientos' && rolActivo !== 'Maestro') return;
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
 
@@ -1742,6 +1876,7 @@ ${item.descripcion || 'Sin descripción'}`;
             if (tabId === 'administracion') renderizarModuloAdministracion();
             if (tabId === 'agenda' && (rolActivo === 'Administrador' || rolActivo === 'Administrativo')) cargarCitas();
             if (tabId === 'seguimiento' && (rolActivo === 'Administrador' || rolActivo === 'Administrativo')) cargarSeguimientos();
+            if (tabId === 'mis-seguimientos' && rolActivo === 'Maestro') cargarSeguimientos();
         }
 
         function toggleMenu() {
