@@ -226,10 +226,8 @@
                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                     <div class="flex flex-col lg:flex-row lg:items-end gap-3">
                         <div class="flex-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-wider text-utc-blue mb-1">Filtrar por alumno</label>
-                            <select id="filtro-historial-alumno" onchange="procesarHistorial()" class="w-full bg-gray-50 border border-gray-300 text-xs rounded-lg px-3 py-2.5 text-gray-700 focus:outline-none font-bold">
-                                <option value="todos">Todos los alumnos</option>
-                            </select>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-utc-blue mb-1">Buscar por nombre o matrícula</label>
+                            <input id="filtro-historial-busqueda" type="text" oninput="procesarHistorial()" placeholder="Escriba nombre o matrícula..." class="w-full bg-gray-50 border border-gray-300 text-xs rounded-lg px-3 py-2.5 text-gray-700 focus:outline-none focus:border-utc-blue font-bold">
                         </div>
                         <div class="w-full lg:w-64">
                             <label class="block text-[10px] font-bold uppercase tracking-wider text-utc-blue mb-1">Periodo</label>
@@ -479,6 +477,30 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <div id="modal-hecho-reportado" class="fixed inset-0 z-[200] hidden items-center justify-center bg-black/60 p-4" onclick="cerrarHechoReportado(event)">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+            <div class="bg-utc-blue text-white px-5 py-4 flex items-center justify-between gap-4">
+                <div>
+                    <h3 class="font-extrabold text-lg">Hecho reportado</h3>
+                    <p id="modal-hecho-alumno" class="text-xs text-white/70 mt-1"></p>
+                </div>
+                <button type="button" onclick="cerrarHechoReportado()" class="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-xl font-bold" aria-label="Cerrar">×</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div class="bg-gray-50 border rounded-lg p-3"><span class="block text-gray-400 uppercase font-bold">Fecha</span><strong id="modal-hecho-fecha" class="text-utc-blue"></strong></div>
+                    <div class="bg-gray-50 border rounded-lg p-3"><span class="block text-gray-400 uppercase font-bold">Tipo</span><strong id="modal-hecho-tipo" class="text-utc-blue"></strong></div>
+                    <div class="bg-gray-50 border rounded-lg p-3"><span class="block text-gray-400 uppercase font-bold">Autor</span><strong id="modal-hecho-autor" class="text-utc-blue"></strong></div>
+                </div>
+                <div>
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2">Descripción completa</p>
+                    <div id="modal-hecho-descripcion" class="min-h-40 max-h-[55vh] overflow-y-auto whitespace-pre-wrap break-words bg-gray-50 border rounded-xl p-4 text-sm leading-relaxed text-gray-700"></div>
+                </div>
+                <button type="button" onclick="cerrarHechoReportado()" class="w-full bg-utc-orange text-white py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider">Cerrar</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -941,19 +963,6 @@
             });
             if ([...selectorAlumno.options].some(o => o.value === valorDashboard)) selectorAlumno.value = valorDashboard;
 
-            const selectorHistorial = document.getElementById('filtro-historial-alumno');
-            if (selectorHistorial) {
-                const valorHistorial = selectorHistorial.value;
-                selectorHistorial.innerHTML = '<option value="todos">Todos los alumnos</option>';
-                alumnosUnicos.forEach(alumno => {
-                    const opt = document.createElement('option');
-                    opt.value = alumno;
-                    opt.textContent = alumno;
-                    selectorHistorial.appendChild(opt);
-                });
-                if ([...selectorHistorial.options].some(o => o.value === valorHistorial)) selectorHistorial.value = valorHistorial;
-            }
-
             const selectorGrupo = document.getElementById('filtro-grupo');
             selectorGrupo.innerHTML = '<option value="todos">Todos los Grupos</option>';
             const gruposUnicos = [...new Set(incidencias.map(i => i.grupo).filter(Boolean))].sort();
@@ -1011,17 +1020,57 @@
         }
 
 
+        function escaparHTML(valor) {
+            return String(valor ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function verHechoReportado(id) {
+            const item = incidencias.find(i => Number(i.id) === Number(id));
+            if (!item) return alert('No se encontró el registro seleccionado.');
+
+            document.getElementById('modal-hecho-alumno').textContent = `${item.nombre || 'Alumno sin nombre'} · ${item.matricula || 'Sin matrícula'} · ${item.grupo || 'Sin grupo'}`;
+            document.getElementById('modal-hecho-fecha').textContent = item.fecha || 'Sin fecha';
+            document.getElementById('modal-hecho-tipo').textContent = item.tipo || item.eje || 'Sin tipo';
+            document.getElementById('modal-hecho-autor').textContent = obtenerAutorReporte(item);
+            document.getElementById('modal-hecho-descripcion').textContent = item.descripcion || 'Sin descripción registrada.';
+
+            const modal = document.getElementById('modal-hecho-reportado');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function cerrarHechoReportado(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const modal = document.getElementById('modal-hecho-reportado');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') cerrarHechoReportado();
+        });
+
         function procesarHistorial() {
-            const selectorAlumno = document.getElementById('filtro-historial-alumno');
+            const inputBusqueda = document.getElementById('filtro-historial-busqueda');
             const selectorTiempo = document.getElementById('filtro-historial-tiempo');
-            const alumno = selectorAlumno ? selectorAlumno.value : 'todos';
+            const busqueda = inputBusqueda ? inputBusqueda.value.toLowerCase().trim() : '';
             const tiempo = selectorTiempo ? selectorTiempo.value : 'todo';
             const ahora = Date.now();
 
             let filtradas = [...incidencias];
 
-            if (alumno !== 'todos') {
-                filtradas = filtradas.filter(i => String(i.nombre || '') === alumno);
+            if (busqueda !== '') {
+                filtradas = filtradas.filter(i =>
+                    String(i.nombre || '').toLowerCase().includes(busqueda) ||
+                    String(i.matricula || '').toLowerCase().includes(busqueda)
+                );
             }
 
             if (tiempo === 'semana') {
@@ -1053,7 +1102,10 @@
                     <td class="px-4 py-3 whitespace-nowrap text-gray-600">${item.grupo || ''}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-xs font-bold ${item.eje === 'Académica' ? 'text-utc-orange' : item.eje === 'Conductual' ? 'text-amber-600' : 'text-teal-600'}">${item.tipo || ''}</td>
                     <td class="px-4 py-3 whitespace-nowrap text-xs font-bold uppercase text-gray-600">${obtenerAutorReporte(item)}</td>
-                    <td class="px-4 py-3 text-xs text-gray-500 max-w-xs truncate" title="${item.descripcion || ''}">${item.descripcion || ''}</td>
+                    <td class="px-4 py-3 text-xs text-gray-500 max-w-sm">
+                        <div class="line-clamp-2 leading-relaxed">${escaparHTML(item.descripcion || 'Sin descripción')}</div>
+                        <button type="button" onclick="verHechoReportado(${item.id})" class="mt-1 text-utc-blue font-bold hover:text-utc-orange hover:underline">Ver completo</button>
+                    </td>
                     <td class="px-4 py-3 text-center whitespace-nowrap th-eliminar-registro ${rolActivo !== 'Administrador' ? 'hidden' : ''}">
                         <button onclick="eliminarIncidenciaHistorial(${item.id})" class="text-red-500 font-bold hover:underline">Borrar</button>
                     </td>
@@ -1063,9 +1115,9 @@
         }
 
         function limpiarFiltrosHistorial() {
-            const alumno = document.getElementById('filtro-historial-alumno');
+            const busqueda = document.getElementById('filtro-historial-busqueda');
             const tiempo = document.getElementById('filtro-historial-tiempo');
-            if (alumno) alumno.value = 'todos';
+            if (busqueda) busqueda.value = '';
             if (tiempo) tiempo.value = 'todo';
             procesarHistorial();
         }
