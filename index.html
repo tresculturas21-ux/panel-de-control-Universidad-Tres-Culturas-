@@ -42,7 +42,7 @@
                 <div>
                     <label class="block text-xs font-bold uppercase text-utc-blue mb-1">Contraseña</label>
                     <input type="password" id="login-pass" required autocomplete="current-password" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-utc-blue">
-                    <p class="text-[10px] text-gray-400 mt-2">Ingrese usuario y contraseña para poder acceder </p>
+                    <p class="text-[10px] text-gray-400 mt-2">El usuario y la contraseña se validan de forma segura desde Supabase.</p>
                 </div>
                 <button id="btn-validar-acceso" type="submit" class="w-full bg-utc-orange text-white py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider shadow-md hover:bg-[#b03f22] transition-all">
                     Ingresar al Sistema
@@ -221,6 +221,27 @@
                             <button onclick="exportarPDF()" class="flex-1 sm:flex-none bg-utc-orange hover:bg-[#b03f22] text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg transition-all shadow-sm text-center">Exportar PDF</button>
                         </div>
                     </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex flex-col lg:flex-row lg:items-end gap-3">
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-utc-blue mb-1">Filtrar por alumno</label>
+                            <select id="filtro-historial-alumno" onchange="procesarHistorial()" class="w-full bg-gray-50 border border-gray-300 text-xs rounded-lg px-3 py-2.5 text-gray-700 focus:outline-none font-bold">
+                                <option value="todos">Todos los alumnos</option>
+                            </select>
+                        </div>
+                        <div class="w-full lg:w-64">
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-utc-blue mb-1">Periodo</label>
+                            <select id="filtro-historial-tiempo" onchange="procesarHistorial()" class="w-full bg-gray-50 border border-gray-300 text-xs rounded-lg px-3 py-2.5 text-gray-700 focus:outline-none font-bold">
+                                <option value="todo">Historial completo</option>
+                                <option value="semana">Últimos 7 días</option>
+                                <option value="mes">Últimos 30 días</option>
+                            </select>
+                        </div>
+                        <button onclick="limpiarFiltrosHistorial()" class="w-full lg:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg transition-all">Limpiar filtros</button>
+                    </div>
+                    <p id="contador-historial" class="text-xs font-bold text-gray-500 mt-3">0 incidencias</p>
                 </div>
 
                 <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-md">
@@ -907,15 +928,31 @@
         });
 
         function actualizarSelectorAlumnos() {
+            const alumnosUnicos = [...new Set(incidencias.map(i => i.nombre).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+
             const selectorAlumno = document.getElementById('filtro-alumno');
+            const valorDashboard = selectorAlumno.value;
             selectorAlumno.innerHTML = '<option value="todos">Todos los Alumnos Registrados</option>';
-            const alumnosUnicos = [...new Set(incidencias.map(i => i.nombre).filter(Boolean))].sort();
             alumnosUnicos.forEach(alumno => {
                 const opt = document.createElement('option');
                 opt.value = alumno;
                 opt.textContent = alumno;
                 selectorAlumno.appendChild(opt);
             });
+            if ([...selectorAlumno.options].some(o => o.value === valorDashboard)) selectorAlumno.value = valorDashboard;
+
+            const selectorHistorial = document.getElementById('filtro-historial-alumno');
+            if (selectorHistorial) {
+                const valorHistorial = selectorHistorial.value;
+                selectorHistorial.innerHTML = '<option value="todos">Todos los alumnos</option>';
+                alumnosUnicos.forEach(alumno => {
+                    const opt = document.createElement('option');
+                    opt.value = alumno;
+                    opt.textContent = alumno;
+                    selectorHistorial.appendChild(opt);
+                });
+                if ([...selectorHistorial.options].some(o => o.value === valorHistorial)) selectorHistorial.value = valorHistorial;
+            }
 
             const selectorGrupo = document.getElementById('filtro-grupo');
             selectorGrupo.innerHTML = '<option value="todos">Todos los Grupos</option>';
@@ -963,30 +1000,7 @@
             document.getElementById('kpi-conducta').innerText = conducta;
             document.getElementById('kpi-emocional').innerText = emocional;
 
-            const cuerpo = document.getElementById('tabla-cuerpo');
-            cuerpo.innerHTML = '';
-
-            if (total === 0) {
-                cuerpo.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-gray-400 italic">No se hallaron coincidencias.</td></tr>`;
-            } else {
-                const ordenadas = [...filtradas].sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
-                ordenadas.forEach(item => {
-                    const fila = document.createElement('tr');
-                    fila.innerHTML = `
-                        <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-500">${item.fecha || ""}</td>
-                        <td class="px-4 py-3 whitespace-nowrap font-bold text-utc-blue">${item.matricula || ""}</td>
-                        <td class="px-4 py-3 whitespace-nowrap font-medium text-gray-900">${item.nombre || ""}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-gray-600">${item.grupo || ""}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-xs font-bold ${item.eje==='Académica'?'text-utc-orange':item.eje==='Conductual'?'text-amber-600':'text-teal-600'}">${item.tipo || ""}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-xs font-bold uppercase text-gray-600">${obtenerAutorReporte(item)}</td>
-                        <td class="px-4 py-3 text-xs text-gray-500 max-w-xs truncate" title="${item.descripcion || ""}">${item.descripcion || ""}</td>
-                        <td class="px-4 py-3 text-center whitespace-nowrap th-eliminar-registro ${rolActivo !== "Administrador" ? "hidden" : ""}">
-                            <button onclick="eliminarIncidenciaHistorial(${item.id})" class="text-red-500 font-bold hover:underline">Borrar</button>
-                        </td>
-                    `;
-                    cuerpo.appendChild(fila);
-                });
-            }
+            procesarHistorial();
 
             if (chartTipo && chartFlujo) {
                 chartTipo.data.datasets[0].data = [academico, conducta, emocional];
@@ -997,9 +1011,68 @@
         }
 
 
+        function procesarHistorial() {
+            const selectorAlumno = document.getElementById('filtro-historial-alumno');
+            const selectorTiempo = document.getElementById('filtro-historial-tiempo');
+            const alumno = selectorAlumno ? selectorAlumno.value : 'todos';
+            const tiempo = selectorTiempo ? selectorTiempo.value : 'todo';
+            const ahora = Date.now();
+
+            let filtradas = [...incidencias];
+
+            if (alumno !== 'todos') {
+                filtradas = filtradas.filter(i => String(i.nombre || '') === alumno);
+            }
+
+            if (tiempo === 'semana') {
+                filtradas = filtradas.filter(i => (ahora - Number(i.timestamp || 0)) <= 7 * 24 * 60 * 60 * 1000);
+            } else if (tiempo === 'mes') {
+                filtradas = filtradas.filter(i => (ahora - Number(i.timestamp || 0)) <= 30 * 24 * 60 * 60 * 1000);
+            }
+
+            filtradas.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+
+            const contador = document.getElementById('contador-historial');
+            if (contador) contador.innerText = `${filtradas.length} incidencia${filtradas.length === 1 ? '' : 's'}`;
+
+            const cuerpo = document.getElementById('tabla-cuerpo');
+            if (!cuerpo) return;
+            cuerpo.innerHTML = '';
+
+            if (filtradas.length === 0) {
+                cuerpo.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-gray-400 italic">No se encontraron incidencias con esos filtros.</td></tr>`;
+                return;
+            }
+
+            filtradas.forEach(item => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-500">${item.fecha || ''}</td>
+                    <td class="px-4 py-3 whitespace-nowrap font-bold text-utc-blue">${item.matricula || ''}</td>
+                    <td class="px-4 py-3 whitespace-nowrap font-medium text-gray-900">${item.nombre || ''}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-600">${item.grupo || ''}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-xs font-bold ${item.eje === 'Académica' ? 'text-utc-orange' : item.eje === 'Conductual' ? 'text-amber-600' : 'text-teal-600'}">${item.tipo || ''}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-xs font-bold uppercase text-gray-600">${obtenerAutorReporte(item)}</td>
+                    <td class="px-4 py-3 text-xs text-gray-500 max-w-xs truncate" title="${item.descripcion || ''}">${item.descripcion || ''}</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap th-eliminar-registro ${rolActivo !== 'Administrador' ? 'hidden' : ''}">
+                        <button onclick="eliminarIncidenciaHistorial(${item.id})" class="text-red-500 font-bold hover:underline">Borrar</button>
+                    </td>
+                `;
+                cuerpo.appendChild(fila);
+            });
+        }
+
+        function limpiarFiltrosHistorial() {
+            const alumno = document.getElementById('filtro-historial-alumno');
+            const tiempo = document.getElementById('filtro-historial-tiempo');
+            if (alumno) alumno.value = 'todos';
+            if (tiempo) tiempo.value = 'todo';
+            procesarHistorial();
+        }
+
         async function actualizarHistorial() {
             await cargarDatosSupabase();
-            procesarAnaliticas();
+            procesarHistorial();
             alert("Historial actualizado correctamente.");
         }
 
@@ -1284,7 +1357,8 @@
             document.getElementById(`btn-${tabId}`).classList.add('bg-utc-orange', 'text-white', 'shadow-md');
 
             if (window.innerWidth < 768) toggleMenu();
-            if (tabId === 'dashboard' || tabId === 'historial') procesarAnaliticas();
+            if (tabId === 'dashboard') procesarAnaliticas();
+            if (tabId === 'historial') procesarHistorial();
             if (tabId === 'administracion') renderizarModuloAdministracion();
             if (tabId === 'agenda' && (rolActivo === 'Administrador' || rolActivo === 'Administrativo')) cargarCitas();
         }
