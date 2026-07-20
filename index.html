@@ -1664,7 +1664,12 @@ ${item.descripcion || 'Sin descripción'}`;
         }
 
         async function cargarCitas() {
-            const { data, error } = await supabaseClient.from("citas_padres").select("*").order("fecha", { ascending: true }).order("hora", { ascending: true });
+            const { data, error } = await supabaseClient
+                .from("citas_padres")
+                .select("*")
+                .eq("eliminado", false)
+                .order("fecha", { ascending: true })
+                .order("hora", { ascending: true });
             if (error) {
                 console.warn("La tabla citas_padres aún no está disponible:", error.message);
                 citasPadres = [];
@@ -1782,10 +1787,24 @@ ${item.descripcion || 'Sin descripción'}`;
 
         async function eliminarCita(id) {
             if (rolActivo !== "Administrador") return alert("Solo el Administrador puede eliminar citas.");
-            if (!confirm("¿Desea eliminar esta cita?")) return;
-            const { error } = await supabaseClient.from("citas_padres").delete().eq("id", id);
-            if (error) return alert("No se pudo eliminar la cita.");
+            if (!confirm("¿Desea quitar esta cita de la agenda? Podrá recuperarse desde Supabase porque no se borrará definitivamente.")) return;
+
+            const { error } = await supabaseClient
+                .from("citas_padres")
+                .update({
+                    eliminado: true,
+                    eliminado_en: new Date().toISOString(),
+                    eliminado_por: `${usuarioActivo.cargo}: ${usuarioActivo.nombre}`
+                })
+                .eq("id", id);
+
+            if (error) {
+                console.error(error);
+                return alert("No se pudo quitar la cita. Verifique que las columnas de eliminación segura existan en Supabase.");
+            }
+
             await cargarCitas();
+            alert("La cita se quitó de la agenda, pero quedó guardada en Supabase para poder recuperarla.");
         }
 
         function verDetalleCita(id) {
