@@ -279,7 +279,7 @@
                         <h2 class="text-xl md:text-2xl font-bold text-utc-blue">Seguimiento de Incidencias</h2>
                         <p class="text-xs md:text-sm text-gray-500">Consulta los casos registrados, documenta las acciones realizadas y marca cada caso como cerrado o pendiente.</p>
                     </div>
-                    <button onclick="cargarSeguimientos()" class="bg-utc-blue text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider">Actualizar</button>
+                    <button onclick="actualizarSeguimientosCompleto()" class="bg-utc-blue text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider">Actualizar</button>
                 </div>
 
                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
@@ -357,7 +357,7 @@
                         <h2 class="text-xl md:text-2xl font-bold text-utc-blue">Estado de mis Incidencias</h2>
                         <p class="text-xs md:text-sm text-gray-500">Aquí se muestran únicamente las incidencias que usted registró y que ya recibieron seguimiento.</p>
                     </div>
-                    <button onclick="cargarSeguimientos()" class="bg-utc-blue text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase">Actualizar</button>
+                    <button onclick="actualizarSeguimientosCompleto()" class="bg-utc-blue text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase">Actualizar</button>
                 </div>
                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                     <input id="filtro-mis-seguimientos" oninput="renderizarMisSeguimientos()" type="text" placeholder="Buscar por matrícula o nombre del alumno..." class="w-full border rounded-lg px-3 py-2.5 text-xs bg-gray-50">
@@ -1363,6 +1363,27 @@
             }
         }
 
+        async function actualizarSeguimientosCompleto() {
+            if (!(rolActivo === 'Administrador' || rolActivo === 'Administrativo' || rolActivo === 'Maestro')) return;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('incidencias')
+                    .select('*')
+                    .order('timestamp', { ascending: false });
+
+                if (error) throw error;
+
+                incidencias = (data || []).map(normalizarIncidencia);
+                await cargarSeguimientos();
+                procesarAnaliticas();
+                procesarHistorial();
+            } catch (error) {
+                console.error('Error actualizando incidencias y seguimientos:', error);
+                alert('No se pudieron actualizar las incidencias. Revisa la conexión y las políticas de Supabase.');
+            }
+        }
+
         async function cargarSeguimientos() {
             if (!(rolActivo === 'Administrador' || rolActivo === 'Administrativo' || rolActivo === 'Maestro')) return;
             const { data, error } = await supabaseClient
@@ -1894,8 +1915,8 @@ ${item.descripcion || 'Sin descripción'}`;
             if (tabId === 'historial') procesarHistorial();
             if (tabId === 'administracion') renderizarModuloAdministracion();
             if (tabId === 'agenda' && (rolActivo === 'Administrador' || rolActivo === 'Administrativo')) cargarCitas();
-            if (tabId === 'seguimiento' && (rolActivo === 'Administrador' || rolActivo === 'Administrativo')) cargarSeguimientos();
-            if (tabId === 'mis-seguimientos' && rolActivo === 'Maestro') cargarSeguimientos();
+            if (tabId === 'seguimiento' && (rolActivo === 'Administrador' || rolActivo === 'Administrativo')) actualizarSeguimientosCompleto();
+            if (tabId === 'mis-seguimientos' && rolActivo === 'Maestro') actualizarSeguimientosCompleto();
         }
 
         function toggleMenu() {
