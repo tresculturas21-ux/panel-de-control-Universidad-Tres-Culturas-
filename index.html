@@ -738,29 +738,6 @@
             };
         }
 
-        function completarDatosIncidencias() {
-            const alumnosPorMatricula = new Map(
-                (baseAlumnos || []).map(a => [String(a.matricula || '').trim(), a])
-            );
-
-            incidencias = (incidencias || []).map(i => {
-                const matricula = String(i.matricula || '').trim();
-                const alumno = alumnosPorMatricula.get(matricula);
-                const nombreActual = String(i.nombre || '').trim();
-                const grupoActual = String(i.grupo || '').trim();
-
-                return {
-                    ...i,
-                    nombre: (!nombreActual || nombreActual.toUpperCase() === 'EMPTY')
-                        ? (alumno?.nombre || 'Alumno no localizado')
-                        : nombreActual,
-                    grupo: (!grupoActual || grupoActual.toUpperCase() === 'EMPTY')
-                        ? (alumno?.grupo || 'Grupo no localizado')
-                        : grupoActual
-                };
-            });
-        }
-
         async function cargarDatosSupabase() {
             try {
                 const [resIncidencias, resAlumnos] = await Promise.all([
@@ -773,7 +750,6 @@
 
                 incidencias = (resIncidencias.data || []).map(normalizarIncidencia);
                 baseAlumnos = resAlumnos.data || [];
-                completarDatosIncidencias();
 
                 actualizarSelectorAlumnos();
                 procesarAnaliticas();
@@ -1399,7 +1375,6 @@
                 if (error) throw error;
 
                 incidencias = (data || []).map(normalizarIncidencia);
-                completarDatosIncidencias();
                 await cargarSeguimientos();
                 procesarAnaliticas();
                 procesarHistorial();
@@ -1713,7 +1688,6 @@ ${item.descripcion || 'Sin descripción'}`;
             const { data, error } = await supabaseClient
                 .from("citas_padres")
                 .select("*")
-                .eq("eliminado", false)
                 .order("fecha", { ascending: true })
                 .order("hora", { ascending: true });
             if (error) {
@@ -1722,7 +1696,10 @@ ${item.descripcion || 'Sin descripción'}`;
                 renderizarCitas();
                 return;
             }
-            citasPadres = data || [];
+
+            // Mostrar registros antiguos con eliminado NULL y registros nuevos con false.
+            // Únicamente se ocultan las citas marcadas explícitamente como eliminadas.
+            citasPadres = (data || []).filter(cita => cita.eliminado !== true);
             renderizarCitas();
         }
 
