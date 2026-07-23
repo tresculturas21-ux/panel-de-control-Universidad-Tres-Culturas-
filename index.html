@@ -732,8 +732,15 @@
         }
 
         function normalizarIncidencia(i) {
+            const matriculaIncidencia = String(i.matricula || '').trim();
+            const alumnoEncontrado = baseAlumnos.find(alumno =>
+                String(alumno.matricula || '').trim() === matriculaIncidencia
+            );
+
             return {
                 ...i,
+                nombre: String(i.nombre || i.alumno || '').trim() || String(alumnoEncontrado?.nombre || '').trim(),
+                grupo: String(i.grupo || '').trim() || String(alumnoEncontrado?.grupo || '').trim(),
                 usuarioRegistro: obtenerAutorReporte(i)
             };
         }
@@ -748,8 +755,8 @@
                 if (resIncidencias.error) throw resIncidencias.error;
                 if (resAlumnos.error) throw resAlumnos.error;
 
-                incidencias = (resIncidencias.data || []).map(normalizarIncidencia);
                 baseAlumnos = resAlumnos.data || [];
+                incidencias = (resIncidencias.data || []).map(normalizarIncidencia);
 
                 actualizarSelectorAlumnos();
                 procesarAnaliticas();
@@ -1622,15 +1629,34 @@ ${item.descripcion || 'Sin descripción'}`;
 
         async function guardarIncidencia(e) {
             e.preventDefault();
+
             const cat = document.getElementById('categoria-seleccionada').value;
             if (!cat) return alert('Por favor elija una categoría.');
+
+            const matriculaCapturada = document.getElementById('matricula').value.trim();
+            const alumnoSeleccionado = baseAlumnos.find(alumno =>
+                String(alumno.matricula || '').trim() === matriculaCapturada
+            );
+
+            if (!alumnoSeleccionado) {
+                alert('Debe seleccionar al alumno desde la lista de sugerencias. No escriba solamente la matrícula.');
+                return;
+            }
+
+            const nombreAlumno = String(alumnoSeleccionado.nombre || '').trim();
+            const grupoAlumno = String(alumnoSeleccionado.grupo || '').trim();
+
+            if (!nombreAlumno) {
+                alert('El alumno seleccionado no tiene nombre registrado en la base de alumnos.');
+                return;
+            }
 
             const nuevaIncidencia = {
                 fecha: new Date().toLocaleDateString('es-MX'),
                 timestamp: Date.now(),
-                matricula: document.getElementById('matricula').value.trim(),
-                nombre: document.getElementById('nombre').value.trim(),
-                grupo: document.getElementById('grupo').value.trim(),
+                matricula: String(alumnoSeleccionado.matricula || '').trim(),
+                nombre: nombreAlumno,
+                grupo: grupoAlumno,
                 tipo: `${cat} - ${document.getElementById('subcategoria').value}`,
                 descripcion: document.getElementById('descripcion').value.trim(),
                 eje: cat,
@@ -1646,6 +1672,8 @@ ${item.descripcion || 'Sin descripción'}`;
             }
 
             document.getElementById('form-incidencia').reset();
+            document.getElementById('nombre').value = '';
+            document.getElementById('grupo').value = '';
             document.getElementById('contenedor-subcategoria').classList.add('hidden');
             document.querySelectorAll('.cat-btn').forEach(b => {
                 b.classList.remove('bg-utc-orange', 'bg-utc-blue', 'bg-teal-600', 'text-white');
